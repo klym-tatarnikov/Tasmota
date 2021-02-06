@@ -148,6 +148,7 @@ enum UserSelectablePins {
   GPIO_BS814_CLK, GPIO_BS814_DAT,      // Holtek BS814A2 touch ctrlr
   GPIO_WIEGAND_D0, GPIO_WIEGAND_D1,    // Wiegand Data lines
   GPIO_NEOPOOL_TX, GPIO_NEOPOOL_RX,    // Sugar Valley RS485 interface
+  GPIO_ZE08_TX, GPIO_ZE08_RX,          // ZE08 Serial interface
   GPIO_SENSOR_END };
 
 enum ProgramSelectablePins {
@@ -316,7 +317,8 @@ const char kSensorNames[] PROGMEM =
   D_SENSOR_BS814_CLK "|" D_SENSOR_BS814_DAT "|"
   D_SENSOR_WIEGAND_D0 "|" D_SENSOR_WIEGAND_D1 "|"
   D_SENSOR_NEOPOOL_TX "|" D_SENSOR_NEOPOOL_RX "|"
-  ;
+  D_SENSOR_ZE08_TX "|" D_SENSOR_ZE08_RX "|"
+    ;
 
 const char kSensorNamesFixed[] PROGMEM =
   D_SENSOR_USER;
@@ -643,6 +645,10 @@ const uint16_t kGpioNiceList[] PROGMEM = {
 #ifdef USE_PMS5003
   AGPIO(GPIO_PMS5003_TX),     // Plantower PMS5003 Serial interface
   AGPIO(GPIO_PMS5003_RX),     // Plantower PMS5003 Serial interface
+#endif
+#ifdef USE_ZE08
+  AGPIO(GPIO_ZE08_TX),     // Plantower ZE08 Serial interface
+  AGPIO(GPIO_ZE08_RX),     // Plantower ZE08 Serial interface
 #endif
 #if defined(USE_TX20_WIND_SENSOR) || defined(USE_TX23_WIND_SENSOR)
   AGPIO(GPIO_TX2X_TXD_BLACK), // TX20/TX23 Transmission Pin

@@ -154,6 +154,7 @@
 #ifndef CO2_HIGH
   #define CO2_HIGH             1200              // Above this CO2 value show red light (needs PWM or WS2812 RG(B) led and enable with SetOption18 1)
 #endif
+#define USE_ZE08                                 // Add support for ZE08 formaldehyde sensor (+1k code)
 #define USE_PMS5003                              // Add support for PMS5003 and PMS7003 particle concentration sensor (+1k3 code)
   //#define PMS_MODEL_PMS3003                      // Enable support of PMS3003 instead of PMS5003/PMS7003 (needs the USE_PMS5003 above)
 #define USE_NOVA_SDS                             // Add support for SDS011 and SDS021 particle concentration sensor (+0k7 code)
@@ -407,6 +408,7 @@
 
 #undef USE_MHZ19                                 // Disable support for MH-Z19 CO2 sensor
 #undef USE_SENSEAIR                              // Disable support for SenseAir K30, K70 and S8 CO2 sensor
+#undef USE_ZE08                                  // Disable support for ZE08 formaldehyde sensor
 #undef USE_PMS5003                               // Disable support for PMS5003 and PMS7003 particle concentration sensor
 #undef USE_NOVA_SDS                              // Disable support for SDS011 and SDS021 particle concentration sensor
 #undef USE_HPMA                                  // Disable support for Honeywell HPMA115S0 particle concentration sensor
@@ -536,6 +538,7 @@
 #undef USE_DISPLAY                               // Disable Display support
 #undef USE_MHZ19                                 // Disable support for MH-Z19 CO2 sensor
 #undef USE_SENSEAIR                              // Disable support for SenseAir K30, K70 and S8 CO2 sensor
+#undef USE_ZE08                                  // Disable support for ZE08 formaldehyde sensor
 #undef USE_PMS5003                               // Disable support for PMS5003 and PMS7003 particle concentration sensor
 #undef USE_NOVA_SDS                              // Disable support for SDS011 and SDS021 particle concentration sensor
 #undef USE_HPMA                                  // Disable support for Honeywell HPMA115S0 particle concentration sensor
@@ -674,6 +677,7 @@
 #undef USE_DISPLAY                               // Disable Display support
 #undef USE_MHZ19                                 // Disable support for MH-Z19 CO2 sensor
 #undef USE_SENSEAIR                              // Disable support for SenseAir K30, K70 and S8 CO2 sensor
+#undef USE_ZE08                                  // Disable support for ZE08 formaldehyde sensor
 #undef USE_PMS5003                               // Disable support for PMS5003 and PMS7003 particle concentration sensor
 #undef USE_NOVA_SDS                              // Disable support for SDS011 and SDS021 particle concentration sensor
 #undef USE_HPMA                                  // Disable support for Honeywell HPMA115S0 particle concentration sensor
@@ -813,6 +817,7 @@
 
 #undef USE_MHZ19                                 // Disable support for MH-Z19 CO2 sensor
 #undef USE_SENSEAIR                              // Disable support for SenseAir K30, K70 and S8 CO2 sensor
+#undef USE_ZE08                                  // Disable support for ZE08 formaldehyde sensor
 #undef USE_PMS5003                               // Disable support for PMS5003 and PMS7003 particle concentration sensor
 #undef USE_NOVA_SDS                              // Disable support for SDS011 and SDS021 particle concentration sensor
 #undef USE_HPMA                                  // Disable support for Honeywell HPMA115S0 particle concentration sensor
