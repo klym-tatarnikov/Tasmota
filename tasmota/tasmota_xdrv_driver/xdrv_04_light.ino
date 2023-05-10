@@ -1411,6 +1411,8 @@ void LightSetSignal(uint16_t lo, uint16_t hi, uint16_t value)
     uint16_t signal = changeUIntScale(value, lo, hi, 0, 255);  // 0..255
 //    AddLog(LOG_LEVEL_DEBUG, PSTR(D_LOG_DEBUG "Light signal %d"), signal);
     light_controller.changeRGB(signal, 255 - signal, 0, true);  // keep bri
+    uint16_t bri = changeUIntScale(value, lo, hi, 10, 255);  // 0..255
+    light_controller.changeBri(bri);
     LightSetScheme(LS_POWER);
     if (0 == light_state.getBri()) {
       light_controller.changeBri(50);
