@@ -3,16 +3,43 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - Development
 
-## [12.5.0.2]
+## [12.5.0.3]
+### Added
+- Command ``WifiPower 0`` to enable dynamic wifi power based on RSSI by @TD-er (#15443)
+- Command ``WifiPower 1`` to restore default wifi power
+- HASPmota `meta` attribute and improved `berry_run`
+
+
+### Breaking Changed
+
+### Changed
+- InfluxDb resolves DNS name before request (#18015)
+- Shutter sliders in WEBGUI automatically appear and disappear during configuration and update during movement (#18701)
+- AdafruitFingerprint library from v2.0.4 to v2.1.0
+
+### Fixed
+- ESP32 InfluxDb initial connection delays using HTTPClient (#18015)
+- Shutter bootloop using more than 4 shutters (#18673)
+- AIThinker webcam issues (#18652)
+- Berry `tasmota.wifi()` would wrongly report wifi as up
+- Inverted shutter now reflect status also in WEBGUI and several minor fixes to make "inverted" consistant (#18701)
+
+### Removed
+
+## [12.5.0.2] 20230516
 ### Added
 - Matter support for Shutters with Tilt
 - Matter POC for remote Relay
 - Support for Zero-Cross Dimmer on ESP32, changed calculation on EPS8266, high resolution control e.g. Solar: `ZCDimmerSet`
 - ESP32 Enhanced Shutterbuttons functionality to control tilt position, additionally incr/decr possible to position and tilt.
-- ESP32 `Shuttersetup` for "Shelly 2.5 pro" automatic calibration and setup (experimental)
+- ESP32 command ``Shuttersetup`` for "Shelly 2.5 pro" automatic calibration and setup (experimental)
 - Berry `tcpclientasync` class for non-blocking TCP client
 - Support for GM861 1D and 2D bar code reader (#18399)
 - Berry `re` (regex) add `match2` and optional offset
+- Support for PCA9557 8-bit I/O expander (#18632)
+- Matter support for async HTTP for bridged devices (#18656)
+- Zigbee support for air sensors (#18665)
+- Command ``I2cScan0`` to scan both busses on ESP32 with one command
 
 ### Breaking Changed
 - Change command ``FileUpload`` index binary data detection from >199 to >299
@@ -20,12 +47,13 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - ESP32 Framework (Core) from v2.0.8 to v2.0.9
 - autoconf extract `display.ini` to file system
+- IRremoteESP8266 library from v2.8.4 to v2.8.5
+- Energy power delta report delayed by two seconds allowing hardware to stabilize (#17751)
 
 ### Fixed
 - Partition_Manager.tapp fixed
 - Berry fixed a rare condition when a GC causes a memory corruption
-
-### Removed
+- LED PWM ac_dimmer curve was wrongly applied instead of Gamma regression from v12.2.0.5 (#18666)
 
 ## [12.5.0.1] 20230505
 ### Added
