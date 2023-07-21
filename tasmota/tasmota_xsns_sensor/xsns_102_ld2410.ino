@@ -315,7 +315,10 @@ void Ld2410Every100MSecond(void) {
       case 56:
         Ld2410SendCommand(LD2410_CMND_REBOOT);                  // Wait at least 1 second
         break;
-      case 51:
+       case 51:
+        Ld2410SetBaudrate(4);                  // Wait at least 1 second
+        break;
+      case 41:
         LD2410.step = 12;
         AddLog(LOG_LEVEL_DEBUG, PSTR("LD2: Settings factory reset"));
         break;
@@ -360,14 +363,15 @@ void Ld2410Every100MSecond(void) {
         Ld2410SetConfigMode();                                  // Stop running mode
         break;
       case 3:
-        if (!LD2410.valid_response && LD2410.retry) {
+      if (!LD2410.valid_response || LD2410.retry) {
           LD2410.retry--;
           if (LD2410.retry) {
 //            LD2410.step = 24;                                   // Change baudrate
             LD2410.step = 7;                                    // Retry
           } else {
-            LD2410.step = 0;
+          //  LD2410.step = 0;
             AddLog(LOG_LEVEL_DEBUG, PSTR("LD2: Not detected"));
+            Ld2410SendCommand(LD2410_CMND_GET_FIRMWARE);
           }
         } else {
           Ld2410SendCommand(LD2410_CMND_GET_FIRMWARE);
@@ -405,7 +409,7 @@ void Ld2410Detect(void) {
     LD2410.buffer = (uint8_t*)malloc(LD2410_BUFFER_SIZE);    // Default 64
     if (!LD2410.buffer) { return; }
     LD2410Serial = new TasmotaSerial(Pin(GPIO_LD2410_RX), Pin(GPIO_LD2410_TX), 2);
-    if (LD2410Serial->begin(256000)) {
+    if (LD2410Serial->begin(57600)) {
       if (LD2410Serial->hardwareSerial()) { ClaimSerial(); }
 
       LD2410.retry = 4;
@@ -497,8 +501,13 @@ void Ld2410Show(bool json) {
   float detect_distance = LD2410.detect_distance;
   if (json) {
     //                                                             cm   cm   cm                          %  %
-    ResponseAppend_P(PSTR(",\"LD2410\":{\"" D_JSON_DISTANCE "\":[%1_f,%1_f,%1_f],\"" D_JSON_ENERGY "\":[%d,%d]}"),
+    ResponseAppend_P(PSTR(",\"LD2410 Moving\":{\"" D_JSON_DISTANCE "\":%0_f,\"RFEnergy\":%d}"), &moving_distance, LD2410.moving_energy);
+    ResponseAppend_P(PSTR(",\"LD2410 Static\":{\"" D_JSON_DISTANCE "\":%0_f,\"RFEnergy\":%d}"), &static_distance, LD2410.static_energy);
+    ResponseAppend_P(PSTR(",\"LD2410 Detect\":{\"" D_JSON_DISTANCE "\":%0_f}"), &detect_distance);
+/*   
+    ResponseAppend_P(PSTR(",\"LD2410 Moving\":{\"" D_JSON_DISTANCE "\":[%1_f,%1_f,%1_f],\"" D_JSON_ENERGY "\":[%d,%d]}"),
       &moving_distance, &static_distance, &detect_distance, LD2410.moving_energy, LD2410.static_energy);
+*/
 #ifdef USE_WEBSERVER
   } else {
     WSContentSend_PD(HTTP_SNS_LD2410_CM, &moving_distance, &static_distance, &detect_distance);
