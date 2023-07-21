@@ -17,6 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import matter
+
 # Matter plug-in for core behavior
 
 # dummy declaration for solidification
@@ -55,19 +57,20 @@ class Matter_Plugin_Light3 : Matter_Plugin_Light1
     import light
     super(self).update_shadow()
     var light_status = light.get()
-    var hue = light_status.find('hue', nil)
-    var sat = light_status.find('sat', nil)
-    if hue != nil     hue = tasmota.scale_uint(hue, 0, 360, 0, 254)   else hue = self.shadow_hue      end
-    if sat != nil     sat = tasmota.scale_uint(sat, 0, 255, 0, 254)   else sat = self.shadow_sat      end
-    if hue != self.shadow_hue   self.attribute_updated(0x0300, 0x0000)   self.shadow_hue = hue   end
-    if sat != self.shadow_sat   self.attribute_updated(0x0300, 0x0001)   self.shadow_sat = sat   end
+    if light_status != nil
+      var hue = light_status.find('hue', nil)
+      var sat = light_status.find('sat', nil)
+      if hue != nil     hue = tasmota.scale_uint(hue, 0, 360, 0, 254)   else hue = self.shadow_hue      end
+      if sat != nil     sat = tasmota.scale_uint(sat, 0, 255, 0, 254)   else sat = self.shadow_sat      end
+      if hue != self.shadow_hue   self.attribute_updated(0x0300, 0x0000)   self.shadow_hue = hue   end
+      if sat != self.shadow_sat   self.attribute_updated(0x0300, 0x0001)   self.shadow_sat = sat   end
+    end
   end
 
   #############################################################
   # read an attribute
   #
-  def read_attribute(session, ctx)
-    import string
+  def read_attribute(session, ctx, tlv_solo)
     var TLV = matter.TLV
     var cluster = ctx.cluster
     var attribute = ctx.attribute
@@ -76,32 +79,32 @@ class Matter_Plugin_Light3 : Matter_Plugin_Light1
     if   cluster == 0x0300              # ========== Color Control 3.2 p.111 ==========
       self.update_shadow_lazy()
       if   attribute == 0x0000          #  ---------- CurrentHue / u1 ----------
-        return TLV.create_TLV(TLV.U1, self.shadow_hue)
+        return tlv_solo.set(TLV.U1, self.shadow_hue)
       elif attribute == 0x0001          #  ---------- CurrentSaturation / u2 ----------
-        return TLV.create_TLV(TLV.U1, self.shadow_sat)
+        return tlv_solo.set(TLV.U1, self.shadow_sat)
       elif attribute == 0x0007          #  ---------- ColorTemperatureMireds / u2 ----------
-        return TLV.create_TLV(TLV.U1, 0)
+        return tlv_solo.set(TLV.U1, 0)
       elif attribute == 0x0008          #  ---------- ColorMode / u1 ----------
-        return TLV.create_TLV(TLV.U1, 0)# 0 = CurrentHue and CurrentSaturation
+        return tlv_solo.set(TLV.U1, 0)# 0 = CurrentHue and CurrentSaturation
       elif attribute == 0x000F          #  ---------- Options / u1 ----------
-        return TLV.create_TLV(TLV.U1, 0)
+        return tlv_solo.set(TLV.U1, 0)
       elif attribute == 0x4001          #  ---------- EnhancedColorMode / u1 ----------
-        return TLV.create_TLV(TLV.U1, 0)
+        return tlv_solo.set(TLV.U1, 0)
       elif attribute == 0x400A          #  ---------- ColorCapabilities / map2 ----------
-        return TLV.create_TLV(TLV.U1, 0)
+        return tlv_solo.set(TLV.U1, 0x01)    # HS
       
       # Defined Primaries Information Attribute Set
       elif attribute == 0x0010          #  ---------- NumberOfPrimaries / u1 ----------
-        return TLV.create_TLV(TLV.U1, 0)
+        return tlv_solo.set(TLV.U1, 0)
 
       elif attribute == 0xFFFC          #  ---------- FeatureMap / map32 ----------
-        return TLV.create_TLV(TLV.U4, 0x01)    # HS
+        return tlv_solo.set(TLV.U4, 0x01)    # HS
       elif attribute == 0xFFFD          #  ---------- ClusterRevision / u2 ----------
-        return TLV.create_TLV(TLV.U4, 5)    # "new data model format and notation, FeatureMap support"
+        return tlv_solo.set(TLV.U4, 5)    # "new data model format and notation, FeatureMap support"
       end
 
     else
-      return super(self).read_attribute(session, ctx)
+      return super(self).read_attribute(session, ctx, tlv_solo)
     end
   end
 

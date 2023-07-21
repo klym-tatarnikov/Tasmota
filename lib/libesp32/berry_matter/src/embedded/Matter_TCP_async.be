@@ -17,6 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import matter
+
 #@ solidify:Matter_TCP_async,weak
 
 # Status:
@@ -79,8 +81,7 @@ class Matter_TCP_async
       end
       return true
     else
-      import string
-      tasmota.log(string.format("BRY: failed to resolve [%s]:%i", self.addr, self.port), 3)
+      tasmota.log(format("BRY: failed to resolve [%s]:%i", self.addr, self.port), 3)
       self.close()
       self.status = -1
       self.tcp_connected = false
@@ -95,6 +96,7 @@ class Matter_TCP_async
     if timeout == nil   timeout = self.TIMEOUT  end
     self.timeout = timeout
   end
+  def get_timeout()   return self.timeout       end
 
   #############################################################
   # Reset the instance to send a open a new connection

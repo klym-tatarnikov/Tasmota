@@ -2210,6 +2210,30 @@ bool TimeReachedUsec(uint32_t timer)
   return (passed >= 0);
 }
 
+void SystemBusyDelay(uint32_t busy) {
+/*
+  TasmotaGlobal.busy_time = millis();
+  SetNextTimeInterval(TasmotaGlobal.busy_time, busy +1);
+  if (!TasmotaGlobal.busy_time) {
+    TasmotaGlobal.busy_time++;
+  }
+*/
+  TasmotaGlobal.busy_time = busy;
+}
+
+void SystemBusyDelayExecute(void) {
+  if (TasmotaGlobal.busy_time) {
+/*
+    // Calls to millis() interrupt RMT and defeats our goal
+    if (!TimeReached(TasmotaGlobal.busy_time)) {
+      delay(1);
+    }
+*/
+    delay(TasmotaGlobal.busy_time);
+    TasmotaGlobal.busy_time = 0;
+  }
+}
+
 /*********************************************************************************************\
  * Syslog
  *
@@ -2454,13 +2478,18 @@ void AddLogData(uint32_t loglevel, const char* log_data, const char* log_data_pa
   }
 }
 
-void AddLog(uint32_t loglevel, PGM_P formatP, ...) {
+uint32_t HighestLogLevel() {
   uint32_t highest_loglevel = TasmotaGlobal.seriallog_level;
   if (Settings->weblog_level > highest_loglevel) { highest_loglevel = Settings->weblog_level; }
   if (Settings->mqttlog_level > highest_loglevel) { highest_loglevel = Settings->mqttlog_level; }
   if (TasmotaGlobal.syslog_level > highest_loglevel) { highest_loglevel = TasmotaGlobal.syslog_level; }
   if (TasmotaGlobal.templog_level > highest_loglevel) { highest_loglevel = TasmotaGlobal.templog_level; }
   if (TasmotaGlobal.uptime < 3) { highest_loglevel = LOG_LEVEL_DEBUG_MORE; }  // Log all before setup correct log level
+  return highest_loglevel;
+}
+
+void AddLog(uint32_t loglevel, PGM_P formatP, ...) {
+  uint32_t highest_loglevel = HighestLogLevel();
 
   // If no logging is requested then do not access heap to fight fragmentation
   if ((loglevel <= highest_loglevel) && (TasmotaGlobal.masterlog_level <= highest_loglevel)) {

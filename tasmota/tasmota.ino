@@ -305,11 +305,13 @@ struct TasmotaGlobal_t {
   bool ntp_force_sync;                      // Force NTP sync
   bool skip_light_fade;                     // Temporarily skip light fading
   bool restart_halt;                        // Do not restart but stay in wait loop
+  bool restart_deepsleep;                   // Do not restart but do deepsleep
   bool module_changed;                      // Indicate module changed since last restart
   bool wifi_stay_asleep;                    // Allow sleep only incase of ESP32 BLE
   bool no_autoexec;                         // Disable autoexec
 
   uint8_t user_globals[3];                  // User set global temp/hum/press
+  uint8_t busy_time;                        // Time in ms to allow executing of time critical functions
   uint8_t init_state;                       // Tasmota init state
   uint8_t heartbeat_inverted;               // Heartbeat pulse inverted flag
   uint8_t spi_enabled;                      // SPI configured

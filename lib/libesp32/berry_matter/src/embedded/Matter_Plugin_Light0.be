@@ -17,6 +17,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+import matter
+
 # Matter plug-in for core behavior
 
 # dummy declaration for solidification
@@ -41,8 +43,8 @@ class Matter_Plugin_Light0 : Matter_Plugin_Device
 
   #############################################################
   # Constructor
-  def init(device, endpoint, arguments)
-    super(self).init(device, endpoint, arguments)
+  def init(device, endpoint, config)
+    super(self).init(device, endpoint, config)
     self.shadow_onoff = false
   end
 
@@ -52,16 +54,17 @@ class Matter_Plugin_Light0 : Matter_Plugin_Device
   def update_shadow()
     import light
     var light_status = light.get()
-    var pow = light_status.find('power', nil)
-    if pow != self.shadow_onoff self.attribute_updated(0x0006, 0x0000)   self.shadow_onoff = pow end
+    if light_status != nil
+      var pow = light_status.find('power', nil)
+      if pow != self.shadow_onoff self.attribute_updated(0x0006, 0x0000)   self.shadow_onoff = pow end
+    end
     super(self).update_shadow()
   end
 
   #############################################################
   # read an attribute
   #
-  def read_attribute(session, ctx)
-    import string
+  def read_attribute(session, ctx, tlv_solo)
     var TLV = matter.TLV
     var cluster = ctx.cluster
     var attribute = ctx.attribute
@@ -70,15 +73,15 @@ class Matter_Plugin_Light0 : Matter_Plugin_Device
     if   cluster == 0x0006              # ========== On/Off 1.5 p.48 ==========
       self.update_shadow_lazy()
       if   attribute == 0x0000          #  ---------- OnOff / bool ----------
-        return TLV.create_TLV(TLV.BOOL, self.shadow_onoff)
+        return tlv_solo.set(TLV.BOOL, self.shadow_onoff)
       elif attribute == 0xFFFC          #  ---------- FeatureMap / map32 ----------
-        return TLV.create_TLV(TLV.U4, 0)    # 0 = no Level Control for Lighting
+        return tlv_solo.set(TLV.U4, 0)    # 0 = no Level Control for Lighting
       elif attribute == 0xFFFD          #  ---------- ClusterRevision / u2 ----------
-        return TLV.create_TLV(TLV.U4, 4)    # 0 = no Level Control for Lighting
+        return tlv_solo.set(TLV.U4, 4)    # 0 = no Level Control for Lighting
       end
 
     else
-      return super(self).read_attribute(session, ctx)
+      return super(self).read_attribute(session, ctx, tlv_solo)
     end
   end
 
