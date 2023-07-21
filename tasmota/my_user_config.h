@@ -601,6 +601,7 @@
     #define MGS_SENSOR_ADDR    0x04              // Default Mutichannel Gas sensor i2c address
 //  #define USE_SGP30                              // [I2cDriver18] Enable SGP30 sensor (I2C address 0x58) (+1k1 code)
 //  #define USE_SGP40                              // [I2cDriver69] Enable SGP40 sensor (I2C address 0x59) (+1k4 code)
+//  #define USE_SGP4X                              // [I2cDriver82] Enable SGP41 sensor (I2C address 0x59) (+7k2 code)
 //  #define USE_SEN5X                              // [I2cDriver76] Enable SEN5X sensor (I2C address 0x69) (+3k code)
 //  #define USE_SI1145                             // [I2cDriver19] Enable SI1145/46/47 sensor (I2C address 0x60) (+1k code)
 //  #define USE_LM75AD                             // [I2cDriver20] Enable LM75AD sensor (I2C addresses 0x48 - 0x4F) (+0k5 code)
@@ -1143,6 +1144,7 @@
   // #define USE_BERRY_CRYPTO_PBKDF2_HMAC_SHA256    // PBKDF2 with HMAC SHA256, used in Matter protocol
   // #define USE_BERRY_CRYPTO_HKDF_SHA256      // HKDF with HMAC SHA256, used in Matter protocol
   // #define USE_BERRY_CRYPTO_SPAKE2P_MATTER   // SPAKE2+ used in Matter 1.0, complete name is SPAKE2+-P256-SHA256-HKDF-SHA256-HMAC-SHA256
+  // #define USE_BERRY_CRYPTO_RSA              // RSA primitives including JWT RS256 (3.9KB flash)
 #define USE_CSE7761                              // Add support for CSE7761 Energy monitor as used in Sonoff Dual R3
 
 // -- LVGL Graphics Library ---------------------------------
@@ -1289,34 +1291,6 @@
 
 #if defined(USE_MQTT_TLS) || defined(USE_TELEGRAM) || defined(USE_WEBCLIENT_HTTPS)
   #define USE_TLS                                // flag indicates we need to include TLS code
-#endif
-
-/*********************************************************************************************\
- * Post-process compile options for Matter
-\*********************************************************************************************/
-
-#ifdef ESP32
-#ifdef USE_MATTER_DEVICE
-  #undef  USE_DISCOVERY
-  #define USE_DISCOVERY
-
-// Enable all the crypto required by Matter
-  #undef  USE_BERRY_CRYPTO_EC_P256
-  #define USE_BERRY_CRYPTO_EC_P256
-  #undef  USE_BERRY_CRYPTO_HMAC_SHA256
-  #define USE_BERRY_CRYPTO_HMAC_SHA256
-  #undef  USE_BERRY_CRYPTO_HKDF_SHA256
-  #define USE_BERRY_CRYPTO_HKDF_SHA256
-  #undef  USE_BERRY_CRYPTO_AES_CCM
-  #define USE_BERRY_CRYPTO_AES_CCM
-  #undef  USE_BERRY_CRYPTO_AES_CTR
-  #define USE_BERRY_CRYPTO_AES_CTR
-  #undef  USE_BERRY_CRYPTO_PBKDF2_HMAC_SHA256
-  #define USE_BERRY_CRYPTO_PBKDF2_HMAC_SHA256
-  #undef  USE_BERRY_CRYPTO_SPAKE2P_MATTER
-  #define USE_BERRY_CRYPTO_SPAKE2P_MATTER
-
-#endif // USE_MATTER_DEVICE
 #endif
 
 /*********************************************************************************************\

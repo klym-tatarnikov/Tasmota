@@ -3,14 +3,110 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased] - Development
 
-## [12.5.0.3]
+## [13.0.0.3]
+### Added
+
+### Breaking Changed
+
+### Changed
+- Initial ``DisplayMode`` from 1 to 0 and ``DisplayDimmmer`` from 10% to 50% (#19138)
+
+### Fixed
+- Initial battery level percentage (#19160)
+
+### Removed
+
+## [13.0.0.2] 20230721
+### Added
+- Partition Wizard is now able to convert to safeboot from Shelly partition layout (#19034)
+- Matter mini-profiler (#19075)
+- Berry `_class` can be used in `static var` initialization code (#19088)
+- Berry `energy.update_total()` to call `EnergyUpdateTotal()` from energy driver (#19117)
+- Support for DeepSleep battery level percentage (#19134)
+- Berry metrics for memory allocation/deallocation/reallocation (#19150)
+- Berry `tasmota.loglevel()` and `tasmota.rtc_utc()` for faster performance (#19152)
+- Berry AES CCM decrypting in a single call to avoid any object allocation (#19153)
+
+### Changed
+- ESP32 shutter driver support up to 16 shutters (#18295)
+- Configuration backup and restore now backup and restore ``.xdrvsetXXX`` files too (#18295)
+- Berry extend `range(lower, upper, incr)` to arbitrary increment (#19120)
+- Berry updated syntax highlighting plugin for VSCode (#19123)
+- Matter latency improvement for single attribute reads and single commands (#19158)
+
+## [13.0.0.1] 20230708
+### Added
+- Command ``Delay -1`` to wait until next second (#18984)
+- Matter add option to disable bridge mode (#18992)
+- Support for SGP41 TVOC/NOx Sensor (#18880)
+- Command ``BrRestart`` to restart the Berry VM (experimental) (#19003)
+- Command ``Restart 9`` to save all changes and go into deepsleep waiting for a reset (#19024)
+- Berry added `getgbl` performance counter to `debug.counters()` (#19070)
+
+### Breaking Changed
+- Berry `bool( [] )` and `bool( {} )` now evaluate as `false` (#18986)
+- Berry `import strict` now detects useless expr without side effects (#18997)
+
+### Changed
+- Matter support for temperature in Fahrenheit (`SetOption8 1`) (#18987)
+- Matter improve responsiveness (#19002)
+- ESP32 LVGL library from v8.3.7 to v8.3.8 (no functional change)
+- Matter improve latency for remote commands (#19072)
+
+### Fixed
+- Berry various fixes for Walrus Operator (#18982)
+- MiElHVAC power commands regression from v12.4.0.1 (#18923)
+- `BrRestart` now supports web handlers to work after Berry restart
+
+### Removed
+- Support for ESP32-C3 with chip rev below 3 (old development boards)
+
+## [Released]
+
+## [13.0.0] 20230626
+- Release Qasim
+
+## [12.5.0.4] 20230626
+### Added
+- Matter ability to add or remove endpoint in bridge mode (code only)
+- Matter add controller's Vendor Name to logs and UI
+- Matter redesigned UI
+- Matter add support for Contact Sensor
+- Berry `string.format()` now automatically converts type according to format
+- Matter add friendly-name (NodeLabel) to each endpoint
+- Berry add global function `format` as a simpler syntax to `string.format`
+- Berry added f-strings as an alternative to string formatting
+- Matter display the remote Device Name instead of IP address
+- Berry Walrus operator ':='
+- Zigbee firmware for Sonoff-ZB-Pro v20230507
+
+### Changed
+- Berry `webclient.url_encode()` is now a static class method, no change required to existing code (#18775)
+- Matter Bridge mode always on
+- ESP32 Framework (Core) from v2.0.9 to v2.0.10
+- Berry code size optimizations
+
+### Fixed
+- Interaction of ``SetOption92``, ``VirtualCT``, and ``RGBWWTable`` (#18768)
+- Fixed HASPmota event when value is non-integer (fixes #18229)
+- Matter fix local Occupancy sensor
+- Zigbee fixed regression with SetOption101
+- Berry fixed parser error with upvals in closures
+- NeoPool fix NPFiltration switch result (#18871)
+
+## [12.5.0.3] 20230602
 ### Added
 - Command ``WifiPower 0`` to enable dynamic wifi power based on RSSI by @TD-er (#15443)
 - Command ``WifiPower 1`` to restore default wifi power
-- HASPmota `meta` attribute and improved `berry_run`
-
+- HASPmota `meta` attribute and improved `berry_run` (#18685)
+- Matter bridge for ESP8266 remote endpoints (experimental) (#18734)
+- Display descriptor for ST7735 128x160 display (#18741)
+- Matter support for Occupancy via Switch (experimental) (#18742)
+- Berry RS256 crypto algorithm (RSASSA-MCKS1_v1-5 with SHA256) used for JWT (#18763)
+- Berry add `set_lsb_justified(bool)` to `AudioOutputI2S` (#18774)
 
 ### Breaking Changed
+- Matter relay number starts at 1 instead of 0 to match Tasmota numbering
 
 ### Changed
 - InfluxDb resolves DNS name before request (#18015)
@@ -23,8 +119,11 @@ All notable changes to this project will be documented in this file.
 - AIThinker webcam issues (#18652)
 - Berry `tasmota.wifi()` would wrongly report wifi as up
 - Inverted shutter now reflect status also in WEBGUI and several minor fixes to make "inverted" consistant (#18701)
-
-### Removed
+- Matter fix fabric provisioning from CASE session for iOS 16.5 (#18709)
+- ESP32 SPI initialization for MFRC522 (#18711)
+- Freeze BMP readings before deepsleep (#18720)
+- ESP32 Neopixel busy time adjustment (#18723)
+- Zigbee attributes handling in Berry mapping (#18747)
 
 ## [12.5.0.2] 20230516
 ### Added
@@ -74,8 +173,6 @@ All notable changes to this project will be documented in this file.
 - NovaSDS GUI values (#18444)
 - Berry fix rules for string comparisons (#18464)
 - Shutter: GarageMode does not stop on console commands, `ShutterSetOpen` and `ShutterSetClose` does not reset direction (#18539)
-
-## [Released]
 
 ## [12.5.0] 20230417
 - Release Peyton
@@ -479,15 +576,6 @@ All notable changes to this project will be documented in this file.
 ### Fixed
 - Removed whitespace from JSON values with no decimals (#16365)
 
-## [12.1.0.1] 20220825
-### Added
-- Zigbee device plugin mechanism with commands ``ZbLoad``, ``ZbUnload`` and ``ZbLoadDump`` (#16252)
-- ESP32-S3 support for internal temperature sensor
-- Command ``StatusRetain`` (#11109)
-
-### Changed
-- ESP32 NimBLE library from v1.3.6 to v1.4.0
-
 ## [12.1.1] 20220825
 - Release Patricia
 
@@ -496,6 +584,15 @@ All notable changes to this project will be documented in this file.
 - DNS lookup for .local domains (#16273)
 - Button response delay regression from v12.0.2.4 (#16319)
 - Lost module name in GUI regression from v12.0.2.4 - 20220803 (#16324)
+
+## [12.1.0.1] 20220825
+### Added
+- Zigbee device plugin mechanism with commands ``ZbLoad``, ``ZbUnload`` and ``ZbLoadDump`` (#16252)
+- ESP32-S3 support for internal temperature sensor
+- Command ``StatusRetain`` (#11109)
+
+### Changed
+- ESP32 NimBLE library from v1.3.6 to v1.4.0
 
 ## [12.1.0] 20220818
 - Release Patricia
@@ -533,7 +630,7 @@ All notable changes to this project will be documented in this file.
 - Driver DHT v6 consolidation for both ESP8266 and ESP32 to support SI7021, THS01 and MS01 on ESP32 (#15856)
 - Tasmota ESP32 Arduino core from v2.0.3 to v2.0.4 (#15940)
 
-## [12.0.2.2]
+## [12.0.2.2] 20220701
 ### Added
 - Command ``GlobalTemp2 1..250`` to select Global Temperature source indexed from teleperiod occurance data (#15834)
 - Command ``GlobalHum2 1..250`` to select Global Humidity source indexed from teleperiod occurance data (#15834)
