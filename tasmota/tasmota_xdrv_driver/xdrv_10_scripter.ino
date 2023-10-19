@@ -189,7 +189,9 @@ void Script_ticker4_end(void) {
 }
 #endif
 
-
+#ifndef HARDWARE_FALLBACK
+#define HARDWARE_FALLBACK          2
+#endif
 
 // EEPROM MACROS
 // i2c eeprom
@@ -3807,6 +3809,13 @@ extern void W8960_SetGain(uint8_t sel, uint16_t value);
           SCRIPT_SKIP_SPACES
           lp = GetNumericArgument(lp, OPER_EQU, &fvar, gv);
           SCRIPT_SKIP_SPACES
+          char delimc = 0;
+          if (*lp != ')') {
+            // get delimiter
+            delimc = *lp;
+            lp++;
+          }
+
           char rstring[SCRIPT_MAXSSIZE];
           rstring[0] = 0;
           int8_t index = fvar;
@@ -3855,6 +3864,12 @@ extern void W8960_SetGain(uint8_t sel, uint16_t value);
                       // fail or last string
                       strlcpy(rstring, lwd, glob_script_mem.max_ssize);
                       break;
+                    }
+                  }
+                  if (delimc) {
+                    char *xp = strchr(rstring, delimc);
+                     if (xp) {
+                      *xp = 0;              
                     }
                   }
                   free(mqd);
@@ -4975,8 +4990,8 @@ extern char *SML_GetSVal(uint32_t index);
             if (Is_gpio_used(rxpin) || Is_gpio_used(txpin)) {
               AddLog(LOG_LEVEL_INFO, PSTR("SCR: warning, pins already used"));
             }
-
-            glob_script_mem.sp = new TasmotaSerial(rxpin, txpin, 1, 0, rxbsiz);
+ 
+            glob_script_mem.sp = new TasmotaSerial(rxpin, txpin, HARDWARE_FALLBACK, 0, rxbsiz);
 
             if (glob_script_mem.sp) {
               fvar = glob_script_mem.sp->begin(br, ConvertSerialConfig(sconfig));
@@ -4990,8 +5005,9 @@ extern char *SML_GetSVal(uint32_t index);
 #endif
               AddLog(LOG_LEVEL_INFO, PSTR("SCR: Serial port set to %s %d bit/s at rx=%d tx=%d rbu=%d uart=%d"), GetSerialConfig().c_str(), (uint32_t)br,  (uint32_t)rxpin, (uint32_t)txpin, (uint32_t)rxbsiz, uart);
               Settings->serial_config = savc;
-              if (rxpin == 3 and txpin == 1) ClaimSerial();
-
+              if (glob_script_mem.sp->hardwareSerial()) {
+                ClaimSerial();
+              }
             } else {
               fvar = -2;
             }
@@ -5366,10 +5382,10 @@ extern char *SML_GetSVal(uint32_t index);
                 glob_script_mem.spi.settings = SPISettings(fvar, MSBFIRST, SPI_MODE0);
 
                 if (TasmotaGlobal.spi_enabled) {
-#ifdef EPS8266
+#ifdef ESP8266
                   SPI.begin();
                   glob_script_mem.spi.spip = &SPI;
-#endif // EPS8266
+#endif // ESP8266
 
 #ifdef ESP32
                   if (glob_script_mem.spi.sclk == -1) {
@@ -6803,6 +6819,11 @@ startline:
         }
         // skip empty line
         SCRIPT_SKIP_EOL
+
+        while (*lp == '\t' || *lp == ' ') {
+          lp++;
+        }
+        
         // skip comment
         if (*lp == ';') goto next_line;
         if (!*lp) break;
@@ -11932,24 +11953,15 @@ int32_t call2pwl(const char *url) {
 #endif // TESLA_POWERWALL
 
 
-#ifdef ESP8266
 #include "WiFiClientSecureLightBearSSL.h"
-#else
-#include <WiFiClientSecure.h>
-#endif //ESP8266
 
 // get https info page json string
 uint32_t call2https(const char *host, const char *path) {
   //if (TasmotaGlobal.global_state.wifi_down) return 1;
   uint32_t status = 0;
 
-#ifdef ESP32
-  WiFiClientSecure *httpsClient;
-  httpsClient = new WiFiClientSecure;
-#else
   BearSSL::WiFiClientSecure_light *httpsClient;
   httpsClient = new BearSSL::WiFiClientSecure_light(1024, 1024);
-#endif
 
   httpsClient->setTimeout(2000);
   httpsClient->setInsecure();

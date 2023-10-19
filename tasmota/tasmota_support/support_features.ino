@@ -167,8 +167,8 @@ void ResponseAppendFeatures(void)
 #ifdef USE_MP3_PLAYER
     feature2 |= 0x00002000;  // xdrv_14_mp3.ino
 #endif
-#if defined(USE_I2C) && defined(USE_PCA9685)
-    feature2 |= 0x00004000;  // xdrv_15_pca9685.ino
+#if defined(USE_I2C) && (defined(USE_PCA9685) || defined(USE_PCA9685_V2))
+    feature2 |= 0x00004000;  // xdrv_15_pca9685.ino or xdrv_15_pca9685_v2.ino
 #endif
 #if defined(USE_LIGHT) && defined(USE_TUYA_MCU)
     feature2 |= 0x00008000;  // xdrv_16_tuyadimmer.ino
@@ -331,8 +331,8 @@ void ResponseAppendFeatures(void)
 #if defined(USE_I2C) && defined(USE_MPR121)
     feature4 |= 0x00000002;  // xsns_30_mpr121.ino
 #endif
-#if defined(USE_I2C) && defined(USE_CCS811)
-    feature4 |= 0x00000004;  // xsns_31_ccs811.ino
+#if defined(USE_I2C) && (defined(USE_CCS811) || defined(USE_CCS811_V2))
+    feature4 |= 0x00000004;  // xsns_31_ccs811.ino or xsns_31_ccs811_v2.ino
 #endif
 #if defined(USE_I2C) && defined(USE_MPU6050)
     feature4 |= 0x00000008;  // xsns_32_mpu6050.ino
@@ -900,12 +900,18 @@ void ResponseAppendFeatures(void)
 #if defined(USE_I2C) && defined(USE_SGP4X)
     feature9 |= 0x01000000;  // xdrv_109_sgp4x.ino
 #endif
-
-//    feature9 |= 0x02000000;
-//    feature9 |= 0x04000000;
-//    feature9 |= 0x08000000;
-
-//    feature9 |= 0x10000000;
+#if defined(USE_I2C) && defined(USE_MAX17043)
+    feature9 |= 0x02000000;  // xsns_110_max17043
+#endif
+#if defined(USE_I2C) && defined(USE_ENS16x)
+    feature9 |= 0x04000000;  // xsns_111_ens16x.ino
+#endif
+#if defined(USE_I2C) && defined(USE_ENS210)
+    feature9 |= 0x08000000;  // xsns_112_ens210.ino
+#endif
+#ifdef USE_HC8
+    feature9 |= 0x10000000;  // xsns_113_hc8.ino
+#endif
 //    feature9 |= 0x20000000;
 //    feature9 |= 0x40000000;
 //    feature9 |= 0x80000000;
