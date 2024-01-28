@@ -724,6 +724,11 @@ const uint16_t kGpioNiceList[] PROGMEM = {
   AGPIO(GPIO_MS01),                     // Sonoff MS01
   AGPIO(GPIO_DHT11_OUT),                // Pseudo Single wire DHT11, DHT21, DHT22, AM2301, AM2302, AM2321
 #endif
+#ifdef USE_PIR_DIGITAL
+  AGPIO(GPIO_DHT11),                    // DHT11
+  
+#endif
+
 #ifdef USE_DS18x20
   AGPIO(GPIO_DSB) + MAX_DSB,            // Single wire DS18B20 or DS18S20
 #ifdef ESP8266

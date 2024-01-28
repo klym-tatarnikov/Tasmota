@@ -249,6 +249,9 @@ void ResponseAppendFeatures(void)
 #ifdef USE_DHT
     feature3 |= 0x00000080;  // xsns_06_dht.ino
 #endif
+#ifdef USE_PIR_DIGITAL
+    feature3 |= 0x00000080;  // xsns_06_dht.ino
+#endif
 #if defined(USE_I2C) && defined(USE_SHT)
     feature3 |= 0x00000100;  // xsns_07_sht1x.ino
 #endif

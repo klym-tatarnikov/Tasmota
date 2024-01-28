@@ -16,7 +16,7 @@
   You should have received a copy of the GNU General Public License
   along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-
+#define DEBUG_TASMOTA_SENSOR
 #ifdef USE_CM110x
 /*********************************************************************************************\
  * CM11xx - CO2 sensor
@@ -38,7 +38,7 @@
 enum CM11FilterOptions {CM1107_FILTER_OFF, CM1107_FILTER_FAST, CM1107_FILTER_MEDIUM, CM1107_FILTER_MEDIUM2, CM1107_FILTER_SLOW};
 
 #ifndef CM1107_FILTER_OPTION
-  #define CM1107_FILTER_OPTION          CM1107_FILTER_FAST
+  #define CM1107_FILTER_OPTION          CM1107_FILTER_OFF
 #endif
 /*********************************************************************************************\
  * Source: https://en.gassensor.com.cn/CO2Sensor/list.html (pdf for 1106/1107/1109 sensors)
@@ -72,8 +72,9 @@ enum CM11FilterOptions {CM1107_FILTER_OFF, CM1107_FILTER_FAST, CM1107_FILTER_MED
 #define CM1107_READ_TIMEOUT           400     // Must be way less than 1000 but enough to read 16 bytes at 9600 bps
 #define CM1107_RETRY_COUNT            8
 
-TasmotaSerial *CM11Serial;
 
+TasmotaSerial *CM11Serial[4];
+uint8_t currentSensor=0;
 
 const char CM11_ABC_ENABLED[] = "ABC is Enabled";
 const char CM11_ABC_DISABLED[] = "ABC is Disabled";
@@ -82,7 +83,7 @@ const char CM11_ABC_DISABLED[] = "ABC is Disabled";
 const uint8_t cmd_read[] = {0x01,0x01};   // cm11_cmnd_read_ppm
 uint8_t cmd_abc_enable[] =  {0x07,0x10,0x64,0x00,0x07,0x01,0x90,0x64};   // cm11_cmnd_abc_enable. Not const because can be modified
 const uint8_t cmd_abc_disable[] = {0x07,0x10,0x64,0x02,0x07,0x01,0x90,0x64};   // cm11_cmnd_abc_disable
-const uint8_t cmd_zeropoint[] = {0x03,0x03,0x01,0x90};   // cm11_cmnd_zeropoint_400
+uint8_t cmd_zeropoint[] = {0x03,0x03,0x01,0x90};   // cm11_cmnd_zeropoint_400
 const uint8_t cmd_serial[] = {0x01,0x1F};   // cm11_cmnd_read_serial
 const uint8_t cmd_sw_version[] = {0x01,0x1E};  // cm11_cmnd_read_sw_version
 
@@ -149,7 +150,7 @@ size_t CM11SendCmd(uint8_t command_id)
 #endif  // DEBUG_TASMOTA_SENSOR
   cm11_received = 0;
   cm11_state = 0;
-  return CM11Serial->write(cm11_send, sizeof(cm11_send));
+  return (CM11Serial[currentSensor])->write(cm11_send, sizeof(cm11_send));
 }
 
 /*********************************************************************************************/
@@ -186,7 +187,7 @@ void CM11EverySecond(void)
   cm11_state++;
   //If more than one command was send
   //Reading preffered
-  if (CM11Serial->available() > 0){
+  if (CM11Serial[currentSensor]->available() > 0){
     cm11_received = 0;
   }
 
@@ -202,7 +203,7 @@ void CM11EverySecond(void)
       }
     }
 
-    CM11Serial->flush();                    // Sync reception
+    CM11Serial[currentSensor]->flush();                    // Sync reception
     CM11SendCmd(CM11_CMND_READPPM);
     cm11_received = 0;
   }
@@ -213,8 +214,8 @@ void CM11EverySecond(void)
     uint8_t counter = 0;
     uint8_t resp_len = 50;
     while (((millis() - start) < CM1107_READ_TIMEOUT) && (counter < resp_len)) {
-      if (CM11Serial->available() > 0) {
-        cm11_response[counter++] = CM11Serial->read();
+      if (CM11Serial[currentSensor]->available() > 0) {
+        cm11_response[counter++] = CM11Serial[currentSensor]->read();
         if (counter ==2 && cm11_response[0] == 0x16) { //0x16 - first byte in response
           resp_len = cm11_response[1] +3 ; // Get expected response len (according protocol desc), +3 - first byte, len and checksum
         }
@@ -222,7 +223,17 @@ void CM11EverySecond(void)
         delay(5);
       }
     }
-
+    /*
+#ifdef DEBUG_TASMOTA_SENSOR
+    char txt_resp[resp_len*3];// = {0};
+    memset( txt_resp, 0, resp_len*3 );
+    for(int i=0;i<counter+3;i++)
+    {
+      sprintf(&txt_resp[i*3],"%02x ", cm11_response[i]);
+    }
+    AddLog(LOG_LEVEL_DEBUG, PSTR("CM11Response: %s"),txt_resp);
+#endif  // DEBUG_TASMOTA_SENSOR
+*/
     if (counter < 5) {
       AddLog(LOG_LEVEL_DEBUG, PSTR(D_LOG_DEBUG "CM1107 timeout (command sent, no responce"));
       return;
@@ -327,10 +338,10 @@ bool CM11CommandSensor(void)
       CM11SendCmd(CM11_CMND_ABCENABLE);
       Response_P(S_JSON_SENSOR_INDEX_SVALUE, XSNS_95, CM11_ABC_ENABLED);
       break;
-    case 2:
+/*    case 2:
       CM11SendCmd(CM11_CMND_ZEROPOINT);
       Response_P(S_JSON_SENSOR_INDEX_SVALUE, XSNS_95, D_JSON_ZERO_POINT_CALIBRATION);
-      break;
+      break;*/
     case 3:
       CM11SendCmd(CM11_CMND_SW_VERSION);
       Response_P(S_JSON_SENSOR_INDEX_SVALUE, XSNS_95, "CM11 sw version");
@@ -355,6 +366,17 @@ bool CM11CommandSensor(void)
           } else {
             Response_P(S_JSON_SENSOR_INDEX_SVALUE, XSNS_95, "Valid period value: [1..30]");
           }
+          break;
+          case 2:
+          if(parm[1]>=400 && parm[1] <=10000) {
+            cmd_zeropoint[2] = parm[1]>>8;
+            cmd_zeropoint[3] = parm[1]&0xFF;
+            CM11SendCmd(CM11_CMND_ZEROPOINT);
+            Response_P(S_JSON_SENSOR_INDEX_SVALUE, XSNS_95, D_JSON_ZERO_POINT_CALIBRATION);
+          }else{
+            Response_P(S_JSON_SENSOR_INDEX_SVALUE, XSNS_95, "Invalid Calibration PPM: [400..10000]");
+          }
+           
           break;
         // Set sensor ppm limit. Default 0..5000, but some sensors has another range.
         case 5:
@@ -389,13 +411,22 @@ bool CM11CommandSensor(void)
 
 void CM11Init(void)
 {
+  uint8_t pins[4][2] = {{19,22}, {13,23}, {18,5}, {16,17}};
   cm11_type = 0;
   if (PinUsed(GPIO_CM11_RXD) && PinUsed(GPIO_CM11_TXD)) {
-    CM11Serial = new TasmotaSerial(Pin(GPIO_CM11_RXD), Pin(GPIO_CM11_TXD), 1);
-    if (CM11Serial->begin(9600)) {
-      if (CM11Serial->hardwareSerial()) { ClaimSerial(); }
-      cm11_type = 1;
-      CM11SendCmd(CM11_CMND_SW_VERSION);
+    AddLog(LOG_LEVEL_INFO, PSTR(D_LOG_DEBUG "CM110x config pins TX:%d, RX:%d "),Pin(GPIO_CM11_TXD), Pin(GPIO_CM11_RXD));
+  
+    for (currentSensor=0; currentSensor<4;currentSensor++)
+    {
+    
+      AddLog(LOG_LEVEL_INFO, PSTR(D_LOG_DEBUG "CM110x Creating new instance, pins TX:%d, RX:%d "),pins[currentSensor][1], pins[currentSensor][0]);
+      CM11Serial[currentSensor] = new TasmotaSerial(pins[currentSensor][1], pins[currentSensor][0], 1);
+      if (CM11Serial[currentSensor]->begin(9600)) {
+        if (CM11Serial[currentSensor]->hardwareSerial()) { ClaimSerial(); }
+        cm11_type = 1;
+        //CM11SendCmd(CM11_CMND_SW_VERSION);
+      
+      }
     }
   }
 }
