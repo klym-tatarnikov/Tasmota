@@ -85,6 +85,8 @@
 char eth_hostname[sizeof(TasmotaGlobal.hostname)];
 uint8_t eth_config_change;
 
+extern esp_netif_t* get_esp_interface_netif(esp_interface_t interface);
+
 void EthernetEvent(arduino_event_t *event);
 void EthernetEvent(arduino_event_t *event) {
   switch (event->event_id) {
@@ -95,14 +97,27 @@ void EthernetEvent(arduino_event_t *event) {
 
     case ARDUINO_EVENT_ETH_CONNECTED:
 #ifdef USE_IPV6
-      ETH.enableIpV6();   // enable Link-Local 
+      ETH.enableIPv6();   // enable Link-Local
+      // workaround for the race condition in LWIP, see https://github.com/espressif/arduino-esp32/pull/9016#discussion_r1451774885
+      {
+        uint32_t i = 5;   // try 5 times only
+        while (esp_netif_create_ip6_linklocal(get_esp_interface_netif(ESP_IF_ETH)) != ESP_OK) {
+          delay(1);
+          if (i-- == 0) {
+            AddLog(LOG_LEVEL_INFO, ">>>> HELP");
+            break;
+          }
+        }
+        AddLog(LOG_LEVEL_INFO, ">>>> ESP_IF_ETH i=%i", i);
+      }
 #endif // USE_IPV6
+      
       AddLog(LOG_LEVEL_INFO, PSTR(D_LOG_ETH D_CONNECTED " at %dMbps%s, Mac %s, Hostname %s"),
         ETH.linkSpeed(), (ETH.fullDuplex()) ? " Full Duplex" : "",
         ETH.macAddress().c_str(), eth_hostname
         );
         
-      // AddLog(LOG_LEVEL_DEBUG, D_LOG_ETH "ETH.enableIpV6() -> %i", ETH.enableIpV6());
+      // AddLog(LOG_LEVEL_DEBUG, D_LOG_ETH "ETH.enableIPV6() -> %i", ETH.enableIPV6());
       break;
       
     case ARDUINO_EVENT_ETH_GOT_IP:
@@ -128,11 +143,11 @@ void EthernetEvent(arduino_event_t *event) {
     {
       ip_addr_t ip_addr6;
       ip_addr_copy_from_ip6(ip_addr6, event->event_info.got_ip6.ip6_info.ip);
-      IPAddress addr(ip_addr6);
+      IPAddress addr(&ip_addr6);
       AddLog(LOG_LEVEL_DEBUG, PSTR("%s: IPv6 %s %s"),
              event->event_id == ARDUINO_EVENT_ETH_GOT_IP6 ? "ETH" : "WIF",
-             addr.isLocal() ? PSTR("Local") : PSTR("Global"), addr.toString().c_str());
-      if (!addr.isLocal()) {    // declare network up on IPv6
+             IPv6isLocal(addr) ? PSTR("Local") : PSTR("Global"), addr.toString().c_str());
+      if (!IPv6isLocal(addr)) {    // declare network up on IPv6
         TasmotaGlobal.rules_flag.eth_connected = 1;
         TasmotaGlobal.global_state.eth_down = 0;
       }
@@ -215,7 +230,11 @@ void EthernetInit(void) {
 //  }
 //  delay(1);
 //#endif // CONFIG_IDF_TARGET_ESP32
+#if ESP_IDF_VERSION_MAJOR >= 5
+  if (!ETH.begin( (eth_phy_type_t)Settings->eth_type, Settings->eth_address, eth_mdc, eth_mdio, eth_power, (eth_clock_mode_t)Settings->eth_clk_mode)) {
+#else
   if (!ETH.begin(Settings->eth_address, eth_power, eth_mdc, eth_mdio, (eth_phy_type_t)Settings->eth_type, (eth_clock_mode_t)Settings->eth_clk_mode)) {
+#endif
     AddLog(LOG_LEVEL_DEBUG, PSTR(D_LOG_ETH "Bad PHY type or init error"));
     return;
   };
@@ -379,6 +398,9 @@ bool Xdrv82(uint32_t function) {
       break;
     case FUNC_INIT:
       EthernetInit();
+      break;
+    case FUNC_ACTIVE:
+      result = true;
       break;
   }
   return result;

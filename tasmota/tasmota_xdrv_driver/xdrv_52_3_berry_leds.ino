@@ -33,21 +33,26 @@ enum {
   neopixel_type_end
 };
 
+#ifdef CONFIG_IDF_TARGET_ESP32C2
+typedef NeoPixelBus<NeoGrbFeature, NeoEsp32SpiN800KbpsMethod> neopixel_ws2812_grb_t;
+typedef NeoPixelBus<NeoGrbwFeature, NeoEsp32SpiNSk6812Method> neopixel_sk6812_grbw_t;
+#else
 typedef NeoPixelBus<NeoGrbFeature, NeoEsp32RmtN800KbpsMethod> neopixel_ws2812_grb_t;
 typedef NeoPixelBus<NeoGrbwFeature, NeoEsp32RmtNSk6812Method> neopixel_sk6812_grbw_t;
+#endif
 
 
 /*********************************************************************************************\
  * Native functions mapped to Berry functions
- * 
+ *
  * import unishox
- * 
- * 
+ *
+ *
 \*********************************************************************************************/
 extern "C" {
 
   // # Native commands
-  // # 00 : ctor         
+  // # 00 : ctor
   // # 01 : begin        void -> void
   // # 02 : show         void -> void
   // # 03 : CanShow      void -> bool
@@ -88,7 +93,7 @@ extern "C" {
     int32_t argc = be_top(vm); // Get the number of arguments
     if (argc >= 2 && be_isint(vm, 2)) {
       int32_t cmd = be_toint(vm, 2);
-      
+
       if (0 == cmd) { // 00 : ctor         (leds:int, gpio:int) -> void
         if (!(argc >= 6 && be_isint(vm, 3) && be_isint(vm, 4) && be_isint(vm, 5) && be_isint(vm, 6))) {
           be_raise(vm, "value_error", "bad arguments for neopixelbus:ctor");
@@ -134,8 +139,33 @@ extern "C" {
             if (s_sk6812_grbw)      s_sk6812_grbw->Begin();
             break;
           case 2: // # 02 : show         void -> void
-            if (s_ws2812_grb)       s_ws2812_grb->Show();
-            if (s_sk6812_grbw)      s_sk6812_grbw->Show();
+            {
+            if (Settings->flag6.berry_light_scheme &&
+                (1 == TasmotaGlobal.light_driver)) {  // XLGT_01
+              // TODO: Need to add test for RMT0
+#ifdef USE_NETWORK_LIGHT_SCHEMES
+              bool scheme_berry = ((Light.max_scheme -1) == Settings->light_scheme);
+#else
+              bool scheme_berry = (Light.max_scheme == Settings->light_scheme);
+#endif
+              if (scheme_berry) {
+                if (!Light.power) {
+                  // Skip berry Show() as WS2812 driver Show() has powered off leds
+                  break;
+                }
+              } else {
+                // Skip berry Show() but use WS2812 driver Show() instead
+                break;
+              }
+            }
+            uint32_t pixels_size;       // number of bytes to push
+            if (s_ws2812_grb)     { s_ws2812_grb->Show();   pixels_size = s_ws2812_grb->PixelsSize(); }
+            if (s_sk6812_grbw)    { s_sk6812_grbw->Show();  pixels_size = s_sk6812_grbw->PixelsSize(); }
+
+            // Wait for RMT/I2S to complete fixes distortion due to analogRead
+            // 1ms is needed for 96 bytes
+            SystemBusyDelay((pixels_size + 95) / 96);
+            }
             break;
           case 3: // # 03 : CanShow      void -> bool
             if (s_ws2812_grb)       be_pushbool(vm, s_ws2812_grb->CanShow());
@@ -154,7 +184,7 @@ extern "C" {
             uint8_t * pixels;
             if (s_ws2812_grb)       pixels = s_ws2812_grb->Pixels();
             if (s_sk6812_grbw)      pixels = s_sk6812_grbw->Pixels();
-            
+
             be_pushcomptr(vm, pixels);
             }
             break;
@@ -169,22 +199,29 @@ extern "C" {
           case 9: // # 09 : ClearTo      (color:??) -> void
             {
             uint32_t rgbw = be_toint(vm, 3);
-            uint8_t w = (rgbw & 0xFF000000) >> 24;
-            uint8_t r = (rgbw & 0xFF0000) >> 16;
-            uint8_t g = (rgbw & 0xFF00) >> 8;
-            uint8_t b = (rgbw & 0xFF);
-            if (s_ws2812_grb)       s_ws2812_grb->ClearTo(RgbColor(r, g, b));
-            if (s_sk6812_grbw)      s_sk6812_grbw->ClearTo(RgbwColor(r, g, b, w));
+            uint8_t w = (rgbw >> 24) & 0xFF;
+            uint8_t r = (rgbw >> 16) & 0xFF;
+            uint8_t g = (rgbw >>  8) & 0xFF;
+            uint8_t b = (rgbw      ) & 0xFF;
+            if (argc >= 5 && be_isint(vm, 4) && be_isint(vm, 5)) {
+              uint32_t from = be_toint(vm, 4);
+              uint32_t len = be_toint(vm, 5);
+              if (s_ws2812_grb)       s_ws2812_grb->ClearTo(RgbColor(r, g, b), from, from + len - 1);
+              if (s_sk6812_grbw)      s_sk6812_grbw->ClearTo(RgbwColor(r, g, b, w), from, from + len - 1);
+            } else {
+              if (s_ws2812_grb)       s_ws2812_grb->ClearTo(RgbColor(r, g, b));
+              if (s_sk6812_grbw)      s_sk6812_grbw->ClearTo(RgbwColor(r, g, b, w));
+            }
             }
             break;
           case 10: // # 10 : SetPixelColor (idx:int, color:??) -> void
             {
             int32_t idx = be_toint(vm, 3);
             uint32_t rgbw = be_toint(vm, 4);
-            uint8_t w = (rgbw & 0xFF000000) >> 24;
-            uint8_t r = (rgbw & 0xFF0000) >> 16;
-            uint8_t g = (rgbw & 0xFF00) >> 8;
-            uint8_t b = (rgbw & 0xFF);
+            uint8_t w = (rgbw >> 24) & 0xFF;
+            uint8_t r = (rgbw >> 16) & 0xFF;
+            uint8_t g = (rgbw >>  8) & 0xFF;
+            uint8_t b = (rgbw      ) & 0xFF;
             if (s_ws2812_grb)       s_ws2812_grb->SetPixelColor(idx, RgbColor(r, g, b));
             if (s_sk6812_grbw)      s_sk6812_grbw->SetPixelColor(idx, RgbwColor(r, g, b, w));
             }
@@ -196,11 +233,11 @@ extern "C" {
 
             if (s_ws2812_grb) {
               RgbColor rgb = s_ws2812_grb->GetPixelColor(idx);
-              be_pushint(vm, (rgb.R << 16) | (rgb.G << 8) | rgb.B); 
+              be_pushint(vm, (rgb.R << 16) | (rgb.G << 8) | rgb.B);
             }
             if (s_sk6812_grbw) {
               RgbwColor rgbw = s_sk6812_grbw->GetPixelColor(idx);
-              be_pushint(vm, (rgbw.W << 24) | (rgb.R << 16) | (rgb.G << 8) | rgb.B); 
+              be_pushint(vm, (rgbw.W << 24) | (rgb.R << 16) | (rgb.G << 8) | rgb.B);
             }
             }
             break;
@@ -212,7 +249,92 @@ extern "C" {
     }
     be_raise(vm, kTypeError, nullptr);
   }
+}
 
+uint32_t ApplyBriGamma(uint32_t color_a /* 0xRRGGBB */, uint32_t bri /* 0..255 */, bool gamma) {
+  if (bri == 0) { return 0x000000; }              // if bri is zero, short-cut
+  uint32_t r = (color_a >> 16) & 0xFF;
+  uint32_t g = (color_a >>  8) & 0xFF;
+  uint32_t b = (color_a      ) & 0xFF;
+
+  if (bri < 255) {              // apply bri
+    r = changeUIntScale(bri, 0, 255, 0, r);
+    g = changeUIntScale(bri, 0, 255, 0, g);
+    b = changeUIntScale(bri, 0, 255, 0, b);
+  }
+
+  if (gamma) {                  // apply gamma
+    r = ledGamma(r);
+    g = ledGamma(g);
+    b = ledGamma(b);
+  }
+  uint32_t rgb = (r << 16) | (g << 8) | b;
+  return rgb;
+}
+
+extern "C" {
+  // Leds.blend_color(color_a:int, color_b:int [, alpha:int]) -> color:int
+  //
+  // color_a is 0x..RRGGBB
+  // color_b is 0xAARRGGBB, AA is transparency (00: opaque, FF: transparent)
+  //    Note: the default is 00 considered opaque, so Transparency = 255 - alpha
+  // alpha is 0..255, and optional. If present it overrides `AA` from color_b
+  //    Note: alpha `00` is transparent, `FF` is opaque
+  int32_t be_leds_blend_color(bvm *vm);
+  int32_t be_leds_blend_color(bvm *vm) {
+    int32_t top = be_top(vm); // Get the number of arguments
+    if (top >= 2 && be_isint(vm, 1) && be_isint(vm, 2)) {
+      uint32_t color_a = be_toint(vm, 1);
+      uint32_t color_b = be_toint(vm, 2);
+      uint32_t transpency = (color_b >> 24) & 0xFF;
+      if (top >= 3 && be_isint(vm, 3)) {
+        transpency = 255 - be_toint(vm, 3);
+      }
+      // remove any transparency
+      color_a = color_a & 0xFFFFFF;
+      color_b = color_b & 0xFFFFFF;
+
+      if (transpency == 0) {     // color_b is opaque, return color_b
+        be_pushint(vm, color_b);
+        be_return(vm);
+      }
+      if (transpency >= 255) {  // color_b is transparent, return color_a
+        be_pushint(vm, color_a);
+        be_return(vm);
+      }
+      int32_t r = changeUIntScale(transpency, 0, 255, (color_b >> 16) & 0xFF, (color_a >> 16) & 0xFF);
+      int32_t g = changeUIntScale(transpency, 0, 255, (color_b >>  8) & 0xFF, (color_a >>  8) & 0xFF);
+      int32_t b = changeUIntScale(transpency, 0, 255, (color_b      ) & 0xFF, (color_a      ) & 0xFF);
+      uint32_t rgb = (r << 16) | (g << 8) | b;
+      be_pushint(vm, rgb);
+      be_return(vm);
+    }
+    be_raise(vm, kTypeError, nullptr);
+  }
+
+  // Leds.apply_bri_gamma(color_rgb:int (0xRRGGBB) [bri:int (0..255), gamma:bool]) -> color:int (0xRRGGBB)
+  //
+  int32_t be_leds_apply_bri_gamma(bvm *vm);
+  int32_t be_leds_apply_bri_gamma(bvm *vm) {
+    int32_t top = be_top(vm); // Get the number of arguments
+    if (top >= 1 && be_isint(vm, 1)) {
+      uint32_t color_a = be_toint(vm, 1);
+      uint32_t bri255 = 255;
+      if (top >= 2 && be_isint(vm, 2)) {
+        bri255 = be_toint(vm, 2);
+      }
+      bool gamma = false;
+      if (top >= 3) {
+        gamma = be_tobool(vm, 3);
+      }
+
+      uint32_t rgb = ApplyBriGamma(color_a, bri255, gamma);
+
+      be_pushint(vm, rgb);
+      be_return(vm);
+    }
+    be_raise(vm, kTypeError, nullptr);
+  }
 }
 
 #endif // USE_WS2812

@@ -26,6 +26,10 @@
 #define XDRV_03                   3
 #define XSNS_03                   3
 
+#ifndef MQTT_TELE_RETAIN
+#define MQTT_TELE_RETAIN          0
+#endif
+
 #define ENERGY_NONE               0
 #define ENERGY_WATCHDOG           4        // Allow up to 4 seconds before deciding no valid data present
 
@@ -274,7 +278,7 @@ bool EnergyRtcSettingsValid(void) {
  * Driver Settings load and save using filesystem
 \*********************************************************************************************/
 
-const uint32_t XDRV_03_VERSION = 0x0102;              // Latest driver version (See settings deltas below)
+const uint16_t XDRV_03_VERSION = 0x0102;              // Latest driver version (See settings deltas below)
 
 void EnergySettingsLoad(bool erase) {
   // *** Start init default values in case file is not found ***
@@ -309,6 +313,7 @@ void EnergySettingsLoad(bool erase) {
 //      Settings->energy_kWhtoday_ph[i], &Energy->Settings.energy_today_kWh[i],
 //      Settings->energy_kWhyesterday_ph[i], &Energy->Settings.energy_yesterday_kWh[i]);
   }
+  Energy->Settings.energy_kWhtotal_time = Settings->energy_kWhtotal_time;
 
   // v0102 additions
   Energy->Settings.gui_display = ENERGY_GUI_DISPLAY_MODE;
@@ -345,7 +350,7 @@ void EnergySettingsLoad(bool erase) {
   }
   else {
     // File system not ready: No flash space reserved for file system
-    AddLog(LOG_LEVEL_INFO, PSTR("CFG: Energy use defaults as file system not ready or file not found"));
+    AddLog(LOG_LEVEL_DEBUG, PSTR("CFG: Energy use defaults as file system not ready or file not found"));
   }
 #endif  // USE_UFILESYS
 }
@@ -369,6 +374,12 @@ void EnergySettingsSave(void) {
     }
   }
 #endif  // USE_UFILESYS
+}
+
+bool EnergySettingsRestore(void) {
+  XdrvMailbox.data = (char*)&Energy->Settings;
+  XdrvMailbox.index = sizeof(tEnergySettings);
+  return true;
 }
 
 /********************************************************************************************/
@@ -427,12 +438,13 @@ char* WebEnergyFmt(float* input, uint32_t resolution, uint32_t single) {
   // single = 0 - Energy->phase_count - xx / xx / xx or multi column
   // single = 1 - Energy->voltage_common or Energy->frequency_common - xx or single column using colspan (if needed)
   // single = 2 - Sum of Energy->phase_count if SO129 0 - xx or single column using colspan (if needed) or if SO129 1 - xx / xx / xx or multi column
+  // single = 3 - Sum of Energy->phase_count xx or single column using colspan (if needed)
 
   if (!EnergyFmtMalloc()) { return EmptyStr; }
 
   float input_sum = 0.0f;
-  if (single > 1) {                                      // Sum and/or Single column
-    if (!Settings->flag5.energy_phase) {                 // SetOption129 - (Energy) Show phase information
+  if (single > 1) {                                        // Sum and/or Single column
+    if ((3 == single) || !Settings->flag5.energy_phase) {  // SetOption129 - (Energy) Show phase information
       for (uint32_t i = 0; i < Energy->phase_count; i++) {
         if (!isnan(input[i])) {
           input_sum += input[i];
@@ -443,8 +455,8 @@ char* WebEnergyFmt(float* input, uint32_t resolution, uint32_t single) {
       single = 0;
     }
   }
-  ext_snprintf_P(Energy->value, GUISZ, PSTR("</td>"));       // Skip first column
-  if ((Energy->gui_count > 1) && single) {            // Need to set colspan so need new columns
+  ext_snprintf_P(Energy->value, GUISZ, PSTR("</td>"));     // Skip first column
+  if ((Energy->gui_count > 1) && single) {                 // Need to set colspan so need new columns
     // </td><td colspan='3' style='text-align:right'>1.23</td><td>&nbsp;</td><td>
     // </td><td colspan='5' style='text-align:right'>1.23</td><td>&nbsp;</td><td>
     // </td><td colspan='7' style='text-align:right'>1.23</td><td>&nbsp;</td><td>
@@ -609,6 +621,9 @@ void Energy200ms(void) {
     XnrgCall(FUNC_ENERGY_EVERY_SECOND);
 
     if (RtcTime.valid) {
+      if (!Energy->Settings.energy_kWhtotal_time) {
+        Energy->Settings.energy_kWhtotal_time = LocalTime();
+      }
 
       if (!Energy->kWhtoday_offset_init && (RtcTime.day_of_year == Energy->Settings.energy_kWhdoy)) {
         Energy->kWhtoday_offset_init = true;
@@ -773,7 +788,7 @@ void EnergyMarginCheck(void) {
   if (jsonflg) {
     ResponseJsonEndEnd();
     MqttPublishPrefixTopicRulesProcess_P(TELE, PSTR(D_RSLT_MARGINS), MQTT_TELE_RETAIN);
-//    EnergyMqttShow();
+    EnergyMqttShow();
     Energy->margin_stable = 3;  // Allow 2 seconds to stabilize before reporting
   }
 
@@ -878,7 +893,7 @@ void EnergyEverySecond(void) {
           Energy->active_power[i] = 0;
           if (!isnan(Energy->apparent_power[i])) { Energy->apparent_power[i] = 0; }
           if (!isnan(Energy->reactive_power[i])) { Energy->reactive_power[i] = 0; }
-          if (!isnan(Energy->frequency[i])) { Energy->frequency[i] = 0; }
+          if (!isnan(Energy->frequency[i]) && !Energy->type_dc) { Energy->frequency[i] = 0; }
           if (!isnan(Energy->power_factor[i])) { Energy->power_factor[i] = 0; }
           if (!isnan(Energy->export_active[i])) { Energy->export_active[i] = 0; }
 
@@ -1163,7 +1178,7 @@ void EnergyCommandCalSetResponse(uint32_t cal_type) {
 void EnergyCommandCalResponse(uint32_t cal_type) {
   Energy->command_code = cal_type;                     // Is XxxCal command too
   if (XnrgCall(FUNC_COMMAND)) {                        // XxxCal
-    Response_P(PSTR("{\"%s\":"), XdrvMailbox.command);
+    ResponseCmnd();
     EnergyCommandCalSetResponse(cal_type);
   }
 }
@@ -1364,9 +1379,6 @@ void EnergyDrvInit(void) {
   Energy = (tEnergy*)calloc(sizeof(tEnergy), 1);    // Need calloc to reset registers to 0/false
   if (!Energy) { return; }
 
-  EnergySettingsLoad(0);
-  EnergyRtcSettingsLoad();
-
   Energy->value = nullptr;
 //  Energy->voltage_common = false;
 //  Energy->frequency_common = false;
@@ -1384,9 +1396,13 @@ void EnergyDrvInit(void) {
   Energy->power_on = true;
 
   TasmotaGlobal.energy_driver = ENERGY_NONE;
-  XnrgCall(FUNC_PRE_INIT);             // Find first energy driver
+  XnrgCall(FUNC_PRE_INIT);              // Find first energy driver
   if (TasmotaGlobal.energy_driver) {
+    EnergySettingsLoad(0);
+    EnergyRtcSettingsLoad();
     AddLog(LOG_LEVEL_INFO, PSTR("NRG: Init driver %d"), TasmotaGlobal.energy_driver);
+//  } else {
+//    free(Energy);                       // No energy driver found so release memory
   }
 }
 
@@ -1479,12 +1495,13 @@ void EnergyShow(bool json) {
     }
   }
 
-  float active_power_sum = 0.0f;
   float energy_yesterday_kWh[Energy->phase_count];
+  float active_power_sum = 0.0f;
+  int negative_phases = 0;
   for (uint32_t i = 0; i < Energy->phase_count; i++) {
     energy_yesterday_kWh[i] = Energy->Settings.energy_yesterday_kWh[i];
-
     active_power_sum += Energy->active_power[i];
+    negative_phases += (Energy->active_power[i] < 0) ? -1 : 1;
   }
 
   bool energy_tariff = false;
@@ -1563,10 +1580,10 @@ void EnergyShow(bool json) {
         ResponseAppend_P(PSTR(",\"" D_JSON_POWERFACTOR "\":%s"),
           EnergyFmt(power_factor, 2));
       }
-      if (!isnan(Energy->frequency[0])) {
-        ResponseAppend_P(PSTR(",\"" D_JSON_FREQUENCY "\":%s"),
-          EnergyFmt(Energy->frequency, Settings->flag2.frequency_resolution, frequency_common));
-      }
+    }
+    if (!isnan(Energy->frequency[0])) {
+      ResponseAppend_P(PSTR(",\"" D_JSON_FREQUENCY "\":%s"),
+        EnergyFmt(Energy->frequency, Settings->flag2.frequency_resolution, frequency_common));
     }
     if (Energy->voltage_available) {
       ResponseAppend_P(PSTR(",\"" D_JSON_VOLTAGE "\":%s"),
@@ -1650,7 +1667,7 @@ void EnergyShow(bool json) {
       Energy->gui_count = relay_show - Energy->gui_offset;
       if (Energy->gui_count > Energy->Settings.gui_cols) { Energy->gui_count = Energy->Settings.gui_cols; }
 
-      WSContentSend_P(PSTR("</table><hr/>"));        // Close current table as we will use different column count
+      WSContentSend_P(PSTR("</table>"));        // Close current table as we will use different column count
       bool label_o = voltage_common;
       if (ENERGY_DISPLAY_TABS == Energy->Settings.gui_display) {
         uint32_t tabs = (relay_show -1 + Energy->Settings.gui_cols) / Energy->Settings.gui_cols;
@@ -1685,11 +1702,9 @@ void EnergyShow(bool json) {
       if (Energy->voltage_available) {
         WSContentSend_PD(HTTP_SNS_VOLTAGE, WebEnergyFmt(Energy->voltage, Settings->flag2.voltage_resolution, voltage_common));
       }
-      if (!Energy->type_dc) {
-        if (!isnan(Energy->frequency[0])) {
-          WSContentSend_PD(PSTR("{s}" D_FREQUENCY "{m}%s " D_UNIT_HERTZ "{e}"),
-            WebEnergyFmt(Energy->frequency, Settings->flag2.frequency_resolution, frequency_common));
-        }
+      if (!isnan(Energy->frequency[0])) {
+        WSContentSend_PD(PSTR("{s}" D_FREQUENCY "{m}%s " D_UNIT_HERTZ "{e}"),
+          WebEnergyFmt(Energy->frequency, Settings->flag2.frequency_resolution, frequency_common));
       }
       if (Energy->current_available) {
         WSContentSend_PD(HTTP_SNS_CURRENT, WebEnergyFmt(Energy->current, Settings->flag2.current_resolution));
@@ -1702,6 +1717,9 @@ void EnergyShow(bool json) {
           WSContentSend_PD(HTTP_SNS_POWER_FACTOR, WebEnergyFmt(power_factor, 2));
         }
       }
+      if (abs(negative_phases) != Energy->phase_count) {  // Provide total power if producing power (PV) and multi phase
+         WSContentSend_PD(HTTP_SNS_POWER_TOTAL, WebEnergyFmt(Energy->active_power, Settings->flag2.wattage_resolution, 3));
+      }
       WSContentSend_PD(HTTP_SNS_ENERGY_TODAY, WebEnergyFmt(Energy->daily_kWh, Settings->flag2.energy_resolution, 2));
       WSContentSend_PD(HTTP_SNS_ENERGY_YESTERDAY, WebEnergyFmt(energy_yesterday_kWh, Settings->flag2.energy_resolution, 2));
       WSContentSend_PD(HTTP_SNS_ENERGY_TOTAL, WebEnergyFmt(Energy->total, Settings->flag2.energy_resolution, 2));
@@ -1711,10 +1729,10 @@ void EnergyShow(bool json) {
       }
 
       XnrgCall(FUNC_WEB_COL_SENSOR);
-      WSContentSend_P(PSTR("</table><hr/>{t}"));    // {t} = <table style='width:100%'> - Define for next FUNC_WEB_SENSOR
+      WSContentSend_P(PSTR("</table>{t}"));    // {t} = <table style='width:100%'> - Define for next FUNC_WEB_SENSOR
       XnrgCall(FUNC_WEB_SENSOR);
-#endif  // USE_WEBSERVER
     }
+#endif  // USE_WEBSERVER
   }
   EnergyFmtFree();
 }
@@ -1760,6 +1778,9 @@ bool Xdrv03(uint32_t function)
       case FUNC_RESET_SETTINGS:
         EnergySettingsLoad(1);
         break;
+      case FUNC_RESTORE_SETTINGS:
+        result = EnergySettingsRestore();
+        break;
       case FUNC_SAVE_SETTINGS:
         EnergySettingsSave();
         EnergyRtcSettingsSave();
@@ -1775,6 +1796,9 @@ bool Xdrv03(uint32_t function)
         break;
       case FUNC_NETWORK_DOWN:
         XnrgCall(FUNC_NETWORK_DOWN);
+        break;
+      case FUNC_ACTIVE:
+        result = true;
         break;
     }
   }

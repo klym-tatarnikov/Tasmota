@@ -32,7 +32,7 @@
 #endif
 
 #ifdef ESP32                       // ESP32 family only. Use define USE_HM10 for ESP8266 support
-#if defined CONFIG_IDF_TARGET_ESP32 || defined CONFIG_IDF_TARGET_ESP32C3 || defined CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_IDF_TARGET_ESP32 || CONFIG_IDF_TARGET_ESP32C3 || CONFIG_IDF_TARGET_ESP32C6 || CONFIG_IDF_TARGET_ESP32S3
 #ifdef USE_BLE_ESP32
 
 /*
@@ -2587,7 +2587,7 @@ void CmndBLEAdv(void){
 
 
 //////////////////////////////////////////////////////////////
-// Determine what to do with advertismaents
+// Determine what to do with advertisements
 // BLEAdv0 -> suppress MQTT about devices found
 // BLEAdv1 -> send MQTT about devices found after each scan
 void CmndBLEDebug(void){
@@ -3634,6 +3634,9 @@ bool Xdrv79(uint32_t function)
       WebServer_on(PSTR("/" WEB_HANDLE_BLE), BLE_ESP32::HandleBleConfiguration);
       break;
 #endif  // USE_WEBSERVER
+    case FUNC_ACTIVE:
+      result = true;
+      break;
     }
   return result;
 }

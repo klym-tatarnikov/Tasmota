@@ -470,6 +470,8 @@
   #define USE_ENHANCED_GUI_WIFI_SCAN             // Enable Wi-Fi scan output with BSSID (+0k5 code)
 //  #define USE_WEBSEND_RESPONSE                   // Enable command WebSend response message (+1k code)
 //  #define USE_WEBGETCONFIG                       // Enable restoring config from external webserver (+0k6)
+//  #define USE_GPIO_VIEWER                        // Enable GPIO Viewer to see realtime GPIO states (+6k code)
+//    #define GV_SAMPLING_INTERVAL  100            // [GvSampling] milliseconds - Use Tasmota Scheduler (100) or Ticker (20..99,101..1000)
   #define USE_EMULATION_HUE                      // Enable Hue Bridge emulation for Alexa (+14k code, +2k mem common)
   #define USE_EMULATION_WEMO                     // Enable Belkin WeMo emulation for Alexa (+6k code, +2k mem common)
   // #define USE_CCLOADER                           // Enable CCLoader FW upgrade tool (for CC25xx devices)
@@ -493,14 +495,15 @@
 
 // -- Rules or Script  ----------------------------
 // Select none or only one of the below defines USE_RULES or USE_SCRIPT
-#define USE_RULES                                // Add support for rules (+8k code)
-//  #define USE_EXPRESSION                         // Add support for expression evaluation in rules (+3k2 code, +64 bytes mem)
-//    #define SUPPORT_IF_STATEMENT                 // Add support for IF statement in rules (+4k2 code, -332 bytes mem)
+#define USE_RULES                                // Add support for rules (+13k code, +768 bytes mem)
+  #define SUPPORT_MQTT_EVENT                     // Support trigger event with MQTT subscriptions (+1k8 code)
+  #define USE_EXPRESSION                         // Add support for expression evaluation in rules (+1k7 code)
+    #define SUPPORT_IF_STATEMENT                 // Add support for IF statement in rules (+2k7)
 //  #define USER_RULE1 "<Any rule1 data>"          // Add rule1 data saved at initial firmware load or when command reset is executed
 //  #define USER_RULE2 "<Any rule2 data>"          // Add rule2 data saved at initial firmware load or when command reset is executed
 //  #define USER_RULE3 "<Any rule3 data>"          // Add rule3 data saved at initial firmware load or when command reset is executed
 
-//#define USE_SCRIPT                               // Add support for script (+17k code)
+//#define USE_SCRIPT                               // Add support for script (+36k code, +1k mem)
 //  #define USE_SCRIPT_FATFS 4                     // Script: Add FAT FileSystem Support
 //  #define SUPPORT_MQTT_EVENT                     // Support trigger event with MQTT subscriptions (+3k5 code)
 
@@ -538,6 +541,9 @@
   #define SHELLY_CMDS                            // Add command to send co-processor commands (+0k3 code)
   #define SHELLY_FW_UPGRADE                      // Add firmware upgrade option for co-processor (+3k4 code)
 //  #define SHELLY_VOLTAGE_MON                     // Add support for reading voltage and current measurment (-0k0 code)
+//#define USE_MAGIC_SWITCH                         // Add Sonoff MagicSwitch support as implemented in Sonoff Basic R4 (+612B flash, +64B IRAM for intr)
+//  #define MAGICSWITCH_MIN_PULSE  4000            // Overridable minimum pulse, also overridable by command MagicSwitchPulse (not saved to flash)
+//  #define MAGICSWITCH_MASKING_WINDOW_LEN  5      // Overridable masking window (in number of 50ms loops)
 
 // -- Optional light modules ----------------------
 #define USE_LIGHT                                // Add support for light control
@@ -573,6 +579,7 @@
 // -- One wire sensors ----------------------------
 #define USE_DS18x20                              // Add support for DS18x20 sensors with id sort, single scan and read retry (+2k6 code)
 //  #define W1_PARASITE_POWER                      // Optimize for parasite powered sensors
+//  #define DS18x20_USE_ID_AS_NAME                 // Use last 3 bytes for naming of sensors
 //  #define DS18x20_USE_ID_ALIAS                   // Add support aliasing for DS18x20 sensors. See comments in xsns_05 files (+0k5 code)
 
 // -- I2C sensors ---------------------------------
@@ -601,6 +608,7 @@
     #define MGS_SENSOR_ADDR    0x04              // Default Mutichannel Gas sensor i2c address
 //  #define USE_SGP30                              // [I2cDriver18] Enable SGP30 sensor (I2C address 0x58) (+1k1 code)
 //  #define USE_SGP40                              // [I2cDriver69] Enable SGP40 sensor (I2C address 0x59) (+1k4 code)
+//  #define USE_SGP4X                              // [I2cDriver82] Enable SGP41 sensor (I2C address 0x59) (+7k2 code)
 //  #define USE_SEN5X                              // [I2cDriver76] Enable SEN5X sensor (I2C address 0x69) (+3k code)
 //  #define USE_SI1145                             // [I2cDriver19] Enable SI1145/46/47 sensor (I2C address 0x60) (+1k code)
 //  #define USE_LM75AD                             // [I2cDriver20] Enable LM75AD sensor (I2C addresses 0x48 - 0x4F) (+0k5 code)
@@ -615,6 +623,7 @@
 //    #define USE_MCP230xx_DISPLAYOUTPUT           // Enable MCP23008/MCP23017 to display state of OUTPUT pins on Web UI (+0k2 code)
 //  #define USE_MCP23XXX_DRV                       // [I2cDriver77] Enable MCP23xxx support as virtual switch/button/relay (+3k(I2C)/+5k(SPI) code)
 //  #define USE_PCA9685                            // [I2cDriver1] Enable PCA9685 I2C HW PWM Driver - Must define I2C Address in #define USE_PCA9685_ADDR below - range 0x40 - 0x47 (+1k4 code)
+//  #define USE_PCA9685_V2                         // [I2cDriver1] Enable PCA9685 I2C HW PWM Driver - Must define I2C Address in #define USE_PCA9685_ADDR below - range 0x40 - 0x47 (+3k4 code)
 //    #define USE_PCA9685_ADDR 0x40                // Enable PCA9685 I2C Address to use (Must be within range 0x40 through 0x47 - set according to your wired setup)
 //    #define USE_PCA9685_FREQ 50                  // Define default PWM frequency in Hz to be used (must be within 24 to 1526) - If other value is used, it will rever to 50Hz
 //  #define USE_PCA9632                            // [I2cDriver75] Enable PCA9632 I2C HW PWM Driver (+1k8 code)
@@ -626,6 +635,8 @@
 //  #define USE_MPR121                             // [I2cDriver23] Enable MPR121 controller (I2C addresses 0x5A, 0x5B, 0x5C and 0x5D) in input mode for touch buttons (+1k3 code)
 //  #define USE_CCS811                             // [I2cDriver24] Enable CCS811 sensor (I2C address 0x5A) (+2k2 code)
 //  #define USE_CCS811_V2                          // [I2cDriver24] Enable CCS811 sensor (I2C addresses 0x5A and 0x5B) (+2k8 code)
+//  #define USE_ENS16x                             // [I2cDriver85] Enable ENS160 and ENS161 sensor (I2C addresses 0x52 and 0x53) (+1.9kB of code and 12B of RAM)
+//  #define USE_ENS210                             // [I2cDriver86] Enable ENS210 sensor (I2C addresses 0x43) (+1.7kB of code and 12B of RAM)
 //  #define USE_MPU6050                            // [I2cDriver25] Enable MPU6050 sensor (I2C address 0x68 AD0 low or 0x69 AD0 high) (+3K3 of code and 188 Bytes of RAM)
 //    #define USE_MPU6050_DMP                      // Enable in MPU6050 to use the DMP on the chip, should create better results (+8k6 of code)
 //  #define USE_MGC3130                            // [I2cDriver27] Enable MGC3130 Electric Field Effect Sensor (I2C address 0x42) (+2k7 code, 0k3 mem)
@@ -711,6 +722,8 @@
 //    #define TC74_I2C_PROBE_ADDRESSES { 0x48, 0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F }  // Addresses to probe/support
 //    #define TC74_MAX_FAILCOUNT 8                 // Maximum failed polls before it's marked inactive until reprobing later
 //  #define USE_PCA9557                            // [I2cDriver81] Enable PCA9557 8-bit I/O Expander (I2C addresses 0x18 - 0x1F) (+2k5 code)
+//  #define USE_MAX17043                           // [I2cDriver83] Enable MAX17043 fuel-gauge systems Lipo batteries sensor (I2C address 0x36) (+0k9 code)
+//  #define MAX17043_ALERT_THRESHOLD 32            // [I2cDriver83] Define the alert threshold for low battery level percentage 1-32
 
 //  #define USE_RTC_CHIPS                          // Enable RTC chip support and NTP server - Select only one
 //    #define USE_DS3231                           // [I2cDriver26] Enable DS3231 RTC (I2C address 0x68) (+1k2 code)
@@ -779,6 +792,9 @@
 //  #define USE_CANSNIFFER                         // Add support for can bus sniffer using MCP2515 (+5k code)
 
 #endif  // USE_SPI
+
+// -- One wire sensors ----------------------------
+// #define USE_HDMI_CEC                              // Add support for HDMI CEC bus (+7k code, 1456 bytes IRAM)
 
 // -- Serial sensors ------------------------------
 //#define USE_MHZ19                                // Add support for MH-Z19 CO2 sensor (+2k code)
@@ -1019,7 +1035,7 @@
 
 //#define USE_PROMETHEUS                           // Add support for https://prometheus.io/ metrics exporting over HTTP /metrics endpoint
 
-//#define USE_NEOPOOL                              // Add support for Sugar Valley NeoPool Controller - also known under brands Hidrolife, Aquascenic, Oxilife, Bionet, Hidroniser, UVScenic, Station, Brilix, Bayrol and Hay (+6k flash, +60 mem)
+//#define USE_NEOPOOL                              // Add support for Sugar Valley NeoPool Controller - also known under brands Hidrolife, Aquascenic, Oxilife, Bionet, Hidroniser, UVScenic, Station, Brilix, Bayrol and Hay (+14k flash, +120 mem)
 //  #define NEOPOOL_MODBUS_ADDRESS       1         // Any modbus address
 
 //#define USE_FLOWRATEMETER                        // Add support for water flow meter YF-DN50 and similary (+1k7 code)
@@ -1059,7 +1075,7 @@
   #define THERMOSTAT_TIME_STD_DEV_PEAK_DET_OK   10        // Default standard deviation in minutes of the oscillation periods within the peak detection is successful
 
 // -- PID and Timeprop ------------------------------ // Both together will add +12k1 code
-// #define use TIMEPROP                            // Add support for the timeprop feature (+9k1 code)
+// #define USE_TIMEPROP                            // Add support for the timeprop feature (+9k1 code)
                                                    // For details on the configuration please see the header of tasmota/xdrv_48_timeprop.ino
 // #define USE_PID                                 // Add suport for the PID  feature (+11k2 code)
                                                    // For details on the configuration please see the header of tasmota/xdrv_49_pid.ino
@@ -1122,6 +1138,7 @@
   #define USE_BERRY_TIMEOUT             4000     // Timeout in ms, will raise an exception if running time exceeds this timeout
   #define USE_BERRY_PSRAM                        // Allocate Berry memory in PSRAM if PSRAM is connected - this might be slightly slower but leaves main memory intact
   #define USE_BERRY_IRAM                         // Allocate some data structures in IRAM (which is ususally unused) when possible and if no PSRAM is available
+  #define USE_BERRY_FAST_LOOP_SLEEP_MS  5        // Minimum time in milliseconds to before calling again `tasmota.fast_loop()`, a smaller value will consume more CPU (min 1ms)
   // #define USE_BERRY_DEBUG                        // Compile Berry bytecode with line number information, makes exceptions easier to debug. Adds +8% of memory consumption for compiled code
   //   #define UBE_BERRY_DEBUG_GC                   // Print low-level GC metrics
   // #define USE_BERRY_INT64                        // Add 64 bits integer support (+1.7KB Flash)
@@ -1130,6 +1147,10 @@
                                                  // Note that only one cipher is enabled: ECDHE_RSA_WITH_AES_128_GCM_SHA256 which is very commonly used and highly secure
     #define USE_BERRY_WEBCLIENT_USERAGENT  "TasmotaClient" // default user-agent used, can be changed with `wc.set_useragent()`
     #define USE_BERRY_WEBCLIENT_TIMEOUT  2000    // Default timeout in milliseconds
+    //#define USE_BERRY_PARTITION_WIZARD           // Add a button to dynamically load the Partion Wizard from a bec file online (+1.3KB Flash)
+    #define USE_BERRY_PARTITION_WIZARD_URL      "http://ota.tasmota.com/tapp/partition_wizard.bec"
+    //#define USE_BERRY_GPIOVIEWER                 // Add a button to dynamocally load the GPIO Viewer from a bec file online
+    #define USE_BERRY_GPIOVIEWER_URL            "http://ota.tasmota.com/tapp/gpioviewer.bec"
   #define USE_BERRY_TCPSERVER                    // Enable TCP socket server (+0.6k)
   // #define USE_BERRY_ULP                          // Enable ULP (Ultra Low Power) support (+4.9k)
   // Berry crypto extensions below:
@@ -1143,6 +1164,7 @@
   // #define USE_BERRY_CRYPTO_PBKDF2_HMAC_SHA256    // PBKDF2 with HMAC SHA256, used in Matter protocol
   // #define USE_BERRY_CRYPTO_HKDF_SHA256      // HKDF with HMAC SHA256, used in Matter protocol
   // #define USE_BERRY_CRYPTO_SPAKE2P_MATTER   // SPAKE2+ used in Matter 1.0, complete name is SPAKE2+-P256-SHA256-HKDF-SHA256-HMAC-SHA256
+  // #define USE_BERRY_CRYPTO_RSA              // RSA primitives including JWT RS256 (3.9KB flash)
 #define USE_CSE7761                              // Add support for CSE7761 Energy monitor as used in Sonoff Dual R3
 
 // -- LVGL Graphics Library ---------------------------------
@@ -1185,6 +1207,10 @@
     #define BE_LV_WIDGET_MSGBOX
     #define BE_LV_WIDGET_SPINBOX
     #define BE_LV_WIDGET_SPINNER
+    // #define BE_LV_WIDGET_KEYBOARD
+    // #define BE_LV_WIDGET_TABVIEW
+    // #define BE_LV_WIDGET_TILEVIEW
+    // #define BE_LV_WIDGET_LIST
 
     #define BE_LV_WIDGET_QRCODE
 
@@ -1289,34 +1315,6 @@
 
 #if defined(USE_MQTT_TLS) || defined(USE_TELEGRAM) || defined(USE_WEBCLIENT_HTTPS)
   #define USE_TLS                                // flag indicates we need to include TLS code
-#endif
-
-/*********************************************************************************************\
- * Post-process compile options for Matter
-\*********************************************************************************************/
-
-#ifdef ESP32
-#ifdef USE_MATTER_DEVICE
-  #undef  USE_DISCOVERY
-  #define USE_DISCOVERY
-
-// Enable all the crypto required by Matter
-  #undef  USE_BERRY_CRYPTO_EC_P256
-  #define USE_BERRY_CRYPTO_EC_P256
-  #undef  USE_BERRY_CRYPTO_HMAC_SHA256
-  #define USE_BERRY_CRYPTO_HMAC_SHA256
-  #undef  USE_BERRY_CRYPTO_HKDF_SHA256
-  #define USE_BERRY_CRYPTO_HKDF_SHA256
-  #undef  USE_BERRY_CRYPTO_AES_CCM
-  #define USE_BERRY_CRYPTO_AES_CCM
-  #undef  USE_BERRY_CRYPTO_AES_CTR
-  #define USE_BERRY_CRYPTO_AES_CTR
-  #undef  USE_BERRY_CRYPTO_PBKDF2_HMAC_SHA256
-  #define USE_BERRY_CRYPTO_PBKDF2_HMAC_SHA256
-  #undef  USE_BERRY_CRYPTO_SPAKE2P_MATTER
-  #define USE_BERRY_CRYPTO_SPAKE2P_MATTER
-
-#endif // USE_MATTER_DEVICE
 #endif
 
 /*********************************************************************************************\

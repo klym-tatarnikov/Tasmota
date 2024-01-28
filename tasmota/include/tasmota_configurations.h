@@ -99,6 +99,7 @@
 #define USE_MGS                                // [I2cDriver17] Enable Xadow and Grove Mutichannel Gas sensor using library Multichannel_Gas_Sensor (+10k code)
 #define USE_SGP30                              // [I2cDriver18] Enable SGP30 sensor (I2C address 0x58) (+1k1 code)
 #define USE_SGP40                              // [I2cDriver69] Enable SGP40 sensor (I2C address 0x59) (+1k4 code)
+//#define USE_SGP4X                              // [I2cDriver82] Enable SGP41 sensor (I2C address 0x59) (+7k2 code)
 #define USE_SEN5X                              // [I2cDriver76] Enable SEN5X sensor (I2C address 0x69) (+3k code)
 //#define USE_SI1145                             // [I2cDriver19] Enable SI1145/46/47 sensor (I2C address 0x60) (+1k code)
 #define USE_LM75AD                             // [I2cDriver20] Enable LM75AD sensor (I2C addresses 0x48 - 0x4F) (+0k5 code)
@@ -106,9 +107,12 @@
 //#define USE_MCP230xx                           // [I2cDriver22] Enable MCP23008/MCP23017 - Must define I2C Address in #define USE_MCP230xx_ADDR below - range 0x20 - 0x27 (+4k7 code)
 //#define USE_MCP23XXX_DRV                       // [I2cDriver77] Enable MCP23xxx support as virtual switch/button/relay (+3k(I2C)/+5k(SPI) code)
 //#define USE_PCA9685                            // [I2cDriver1] Enable PCA9685 I2C HW PWM Driver - Must define I2C Address in #define USE_PCA9685_ADDR below - range 0x40 - 0x47 (+1k4 code)
+//#define USE_PCA9685_V2                         // [I2cDriver1] Enable PCA9685 I2C HW PWM Driver - Must define I2C Address in #define USE_PCA9685_ADDR below - range 0x40 - 0x47 (+3k4 code)
 //#define USE_MPR121                             // [I2cDriver23] Enable MPR121 controller (I2C addresses 0x5A, 0x5B, 0x5C and 0x5D) in input mode for touch buttons (+1k3 code)
 #define USE_CCS811                             // [I2cDriver24] Enable CCS811 sensor (I2C address 0x5A) (+2k2 code)
 //#define USE_CCS811_V2                          // [I2cDriver24] Enable CCS811 sensor (I2C addresses 0x5A and 0x5B) (+2k8 code)
+//#define USE_ENS16x                             // [I2cDriver85] Enable ENS160 or ENS161 sensor (I2C addresses 0x52 and 0x53) (+3k1 of code and 524 of RAM)
+//#define USE_ENS210                             // [I2cDriver86] Enable ENS210 sensor (I2C addresses 0x43 and 0x44) (+4k0 of code and 944 of RAM)
 //#define USE_MPU6050                            // [I2cDriver25] Enable MPU6050 sensor (I2C address 0x68 AD0 low or 0x69 AD0 high) (+3K3 of code and 188 Bytes of RAM)
 //#define USE_MGC3130                            // [I2cDriver27] Enable MGC3130 Electric Field Effect Sensor (I2C address 0x42) (+2k7 code, 0k3 mem)
 //#define USE_MAX44009                           // [I2cDriver28] Enable MAX44009 Ambient Light sensor (I2C addresses 0x4A and 0x4B) (+0k8 code)
@@ -819,7 +823,7 @@
 #undef USE_HRE                                   // Disable support for Badger HR-E Water Meter (+1k4 code)
 #undef USE_A4988_STEPPER                         // Disable support for A4988_Stepper
 #undef USE_PROMETHEUS                            // Disable support for https://prometheus.io/ metrics exporting over HTTP /metrics endpoint
-#undef USE_NEOPOOL                               // Disable support for Sugar Valley NeoPool Controller - also known under brands Hidrolife, Aquascenic, Oxilife, Bionet, Hidroniser, UVScenic, Station, Brilix, Bayrol and Hay (+6k flash, +60 mem)
+#undef USE_NEOPOOL                               // Disable support for Sugar Valley NeoPool Controller - also known under brands Hidrolife, Aquascenic, Oxilife, Bionet, Hidroniser, UVScenic, Station, Brilix, Bayrol and Hay (+14k flash, +120 mem)
 #undef USE_THERMOSTAT                            // Disable support for Thermostat
 #undef DEBUG_THEO                                // Disable debug code
 #undef USE_DEBUG_DRIVER                          // Disable debug code
@@ -1043,6 +1047,17 @@
     #define USE_UFILESYS
       #define GUI_TRASH_FILE
       #define GUI_EDIT_FILE
+    #ifdef ESP8266_4M
+      #ifndef USE_FTP
+        #define USE_FTP
+      #endif
+      #ifndef USER_FTP
+        #define USER_FTP "user"
+      #endif
+      #ifndef PW_FTP
+        #define PW_FTP "pass"
+      #endif
+    #endif // ESP8266_4M
     #define USE_SPI
     #define USE_SDCARD
     #define USE_PING

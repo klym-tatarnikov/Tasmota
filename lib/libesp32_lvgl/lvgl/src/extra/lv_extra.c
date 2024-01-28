@@ -50,6 +50,10 @@ void lv_extra_init(void)
     lv_fs_fatfs_init();
 #endif
 
+#if LV_USE_FS_LITTLEFS != '\0'
+    lv_fs_littlefs_init();
+#endif
+
 #if LV_USE_FS_STDIO != '\0'
     lv_fs_stdio_init();
 #endif
@@ -78,16 +82,14 @@ void lv_extra_init(void)
     lv_bmp_init();
 #endif
 
-// TASMOTA Specific, the initialization is done in Tasmota code to adjust with PSRAM
-
-// #if LV_USE_FREETYPE
-//     /*Init freetype library*/
-// #  if LV_FREETYPE_CACHE_SIZE >= 0
-//     lv_freetype_init(LV_FREETYPE_CACHE_FT_FACES, LV_FREETYPE_CACHE_FT_SIZES, LV_FREETYPE_CACHE_SIZE);
-// #  else
-//     lv_freetype_init(0, 0, 0);
-// #  endif
-// #endif
+#if LV_USE_FREETYPE
+    /*Init freetype library*/
+#  if LV_FREETYPE_CACHE_SIZE >= 0
+    lv_freetype_init(LV_FREETYPE_CACHE_FT_FACES, LV_FREETYPE_CACHE_FT_SIZES, LV_FREETYPE_CACHE_SIZE);
+#  else
+    lv_freetype_init(0, 0, 0);
+#  endif
+#endif
 }
 
 /**********************
