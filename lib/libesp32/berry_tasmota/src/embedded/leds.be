@@ -28,66 +28,51 @@ class Leds : Leds_ntv
   var gamma       # if true, apply gamma (true is default)
   var leds        # number of leds
   var bri         # implicit brightness for this led strip (0..255, default is 50% = 127)
+  var animate     # attached animate object or nil - this allows to stop any existing animation for this strip if we add a new animate
   # leds:int = number of leds of the strip
   # gpio:int (optional) = GPIO for NeoPixel. If not specified, takes the WS2812 gpio
   # typ:int (optional) = Type of LED, defaults to WS2812 RGB
-  # rmt:int (optional) = RMT hardware channel to use, leave default unless you have a good reason 
-  def init(leds, gpio_phy, typ, rmt)   # rmt is optional
+  # hardware:int (optional) = hardware support (Leds.RMT, Leds.SPI)
+  def init(leds, gpio_phy, typ, hardware)
+    import gpio
     self.gamma = true     # gamma is enabled by default, it should be disabled explicitly if needed
-    self.leds = int(leds)
-    self.bri = 127        # 50% brightness by default
+    if (leds == nil ) || (gpio_phy == nil) || (gpio_phy == gpio.pin(gpio.WS2812, 0))
+      # use native driver
+      self.ctor()           # no parameters
+      # in such case, `self._p` is equal to `0`
+      self.leds = self.pixel_count()
+      import light
+      self.bri = light.get()['bri']
+    else
+      # use pure Berry driver
+      leds = int(leds)
+      self.leds = leds
+      self.bri = 127        # 50% brightness by default
 
-    # if no GPIO, abort
-    if gpio_phy == nil
-      raise "valuer_error", "no GPIO specified for neopixelbus"
+      # initialize the structure
+      # check if already in global `_lhw`
+      if !global.contains('_lhw')
+        global._lhw = {}
+      end
+      if global._lhw.find(leds) != nil
+        # an object already exists, attach it
+        var prov_led = global._lhw.find(leds)   # already provisioned leds instance
+        if self.leds != prov_led.leds
+          raise "value_error", f"number of leds do not match with previous instanciation {self.leds} vs {prov_led.leds}"
+        end
+        self._p = prov_led._p
+        self.animate = prov_led.animate
+        global._lhw[leds] = self          # put the most recent as current
+      else
+        self.ctor(leds, gpio_phy, typ, hardware)
+        global._lhw[leds] = self
+        # call begin
+        self.begin()
+      end
     end
-
-    # initialize the structure
-    self.ctor(self.leds, gpio_phy, typ, rmt)
 
     if self._p == nil raise "internal_error", "couldn't not initialize noepixelbus" end
 
-    # call begin
-    self.begin()
-
-  end
-
-  # assign RMT
-  static def assign_rmt(gpio_phy)
-    gpio_phy = int(gpio_phy)
-    if gpio_phy < 0   raise "value_error", "invalid GPIO number" end
-
-    import global
-    var rmt
-    # if "_rmt" is not initialized, set to an array of GPIO of size MAX_RMT
-    if !global.contains("_rmt")
-      rmt = []
-      global._rmt = rmt
-      for i:0..gpio.MAX_RMT-1
-        rmt.push(-1)
-      end
-      # if default WS2812 is set, assign RMT0
-      if gpio.pin_used(gpio.WS2812, 0)
-        rmt[0] = gpio.pin(gpio.WS2812, 0)
-      end
-    end
-
-    rmt = global._rmt
-    # find an already assigned slot or try to assign a new one
-    var i = 0
-    var first_free = -1
-    while i < gpio.MAX_RMT
-      var elt = rmt[i]
-      if elt == gpio_phy    return i end      # already assigned
-      if elt < 0 && first_free < 0    first_free = i end    # found a free slot
-      i += 1
-    end
-    if first_free >= 0
-      rmt[first_free] = gpio_phy
-      return first_free
-    end
-    # no more slot
-    raise "internal_error", "no more RMT channel available"
   end
 
   def clear()
@@ -105,14 +90,22 @@ class Leds : Leds_ntv
     return self.bri
   end
 
-  def ctor(leds, gpio_phy, typ, rmt)
-    if typ == nil
-      typ = self.WS2812_GRB
+  def set_animate(animate)
+    self.animate = animate
+  end
+  def get_animate()
+    return self.animate
+  end
+
+  def ctor(leds, gpio_phy, typ, hardware)
+    if gpio_phy == nil
+      self.call_native(0)   # native driver
+    else
+      if typ == nil
+        typ = self.WS2812_GRB
+      end
+      self.call_native(0, leds, gpio_phy, typ, hardware)
     end
-    if rmt == nil
-      rmt = self.assign_rmt(gpio_phy)
-    end
-    self.call_native(0, leds, gpio_phy, typ, rmt)
   end
   def begin()
     self.call_native(1)
@@ -147,9 +140,13 @@ class Leds : Leds_ntv
   def pixel_offset()
     return 0
   end
-  def clear_to(col, bri)
+  def clear_to(col, bri, index, len)
     if (bri == nil)   bri = self.bri    end
-    self.call_native(9, self.to_gamma(col, bri))
+    if index != nil && len != nil
+      self.call_native(9, self.to_gamma(col, bri), index, len)
+    else
+      self.call_native(9, self.to_gamma(col, bri))
+    end
   end
   def set_pixel_color(idx, col, bri)
     if (bri == nil)   bri = self.bri    end
@@ -324,11 +321,11 @@ class Leds : Leds_ntv
         return self.offset
       end
       def clear_to(col, bri)
-        if (bri == nil)   bri = self.bri    end
+        if (bri == nil)   bri = self.strip.bri    end
         self.strip.call_native(9, self.strip.to_gamma(col, bri), self.offset, self.w * self.h)
       end
       def set_pixel_color(idx, col, bri)
-        if (bri == nil)   bri = self.bri    end
+        if (bri == nil)   bri = self.strip.bri    end
         self.strip.set_pixel_color(idx + self.offset, col, bri)
       end
       def get_pixel_color(idx)
@@ -353,8 +350,8 @@ class Leds : Leds_ntv
       end
 
       def set_matrix_pixel_color(x, y, col, bri)
-        if (bri == nil)   bri = self.bri    end
-        if self.alternate && x % 2
+        if (bri == nil)   bri = self.strip.bri    end
+        if self.alternate && (y & 0x1)
           # reversed line
           self.strip.set_pixel_color(x * self.w + self.h - y - 1 + self.offset, col, bri)
         else
@@ -395,15 +392,15 @@ anim()
 
 #-
 
-var s = Leds_matrix(5, 5, gpio.pin(gpio.WS2812, 1))
+var s = Leds(25, gpio.pin(gpio.WS2812, 1)).create_matrix(5, 5)
 s.set_alternate(true)
-s.clear_to(0x300000)
+s.clear_to(0x400000)
 s.show()
 x = 0
 y = 0
 
 def anim()
-  s.clear_to(0x300000)
+  s.clear_to(0x400000)
   s.set_matrix_pixel_color(x, y, 0x004000)
   s.show()
   y = (y + 1) % 5
